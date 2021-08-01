@@ -32,15 +32,11 @@ class TimelinePosition {
   }
 
   TimelineRange to(TimelinePosition to) {
-    return TimelineRange(
-        baseRange: to._basePosition - _basePosition,
-        subRange: to._subPosition - _subPosition);
+    return TimelineRange.fromRange(to.position - position);
   }
 
   TimelineRange from(TimelinePosition from) {
-    return TimelineRange(
-        baseRange: _basePosition - from._basePosition,
-        subRange: _subPosition - from._subPosition);
+    return TimelineRange.fromRange(position - from.position);
   }
 
   bool operator ==(dynamic right) {
@@ -79,12 +75,12 @@ class TimelinePosition {
 }
 
 class TimelineRange {
-  late final int _baseRange;
-  late final double _subRange;
+  int _baseRange = 0;
+  double _subRange = 0.0;
 
-  static final TimelineRange zero = TimelineRange();
+  static final TimelineRange zero = TimelineRange(0, 0);
 
-  TimelineRange({int baseRange = 0, double subRange = 0}) {
+  TimelineRange(int baseRange, double subRange) {
     var f = range.floor();
     _baseRange = baseRange + f;
     _subRange = range - f;
