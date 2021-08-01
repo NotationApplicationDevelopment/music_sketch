@@ -1,41 +1,46 @@
 class TimelinePosition {
-  late int basePosition;
-  late double _subPosition;
+  late final int _basePosition;
+  late final double _subPosition;
+
+  TimelinePosition({int basePosition = 0, double subPosition = 0}) {
+    var f = subPosition.floor();
+    _basePosition = basePosition + f;
+    _subPosition = subPosition - f;
+  }
 
   TimelinePosition.fromPosition(double position) {
-    this.position = position;
-  }
-  TimelinePosition({this.basePosition = 0, double subPosition = 0}) {
-    this.subPosition = subPosition;
+    var f = position.floor();
+    _basePosition = f;
+    _subPosition = position - f;
   }
 
+  TimelinePosition.fromDateTime(DateTime dateTime, DateTime zero,
+      {double millisecondsParUnit = 1000}) {
+    var d = dateTime.difference(zero);
+    var f = (d.inMicroseconds * 0.001 / millisecondsParUnit).floor();
+    _basePosition = f;
+    _subPosition = position - f;
+  }
+
+  int get basePosition => _basePosition;
   double get subPosition => _subPosition;
-  set subPosition(double value) {
-    _subPosition = value.clamp(0.0, 0.999999);
-  }
+  double get position => _basePosition + subPosition;
 
-  double get position => basePosition + subPosition;
-  set position(double value) {
-    var f = value.floor();
-    basePosition = f;
-    _subPosition = value - f;
-  }
-
-  DateTime getAsDateTime(double millisecondsParUnit) {
-    var ms = (position * millisecondsParUnit).toInt();
-    return DateTime.fromMillisecondsSinceEpoch(ms, isUtc: true);
-  }
-
-  void setAsDateTime(double millisecondsParUnit, DateTime value) {
-    this.position = value.microsecondsSinceEpoch * 0.001 / millisecondsParUnit;
+  DateTime getAsDateTime(DateTime zero, {double millisecondsParUnit = 1000}) {
+    var ms = (position * millisecondsParUnit * 1000).toInt();
+    return zero.add(Duration(microseconds: ms));
   }
 
   TimelineRange to(TimelinePosition to) {
-    return TimelineRange.fromRange(to.position - position);
+    return TimelineRange(
+        baseRange: to._basePosition - _basePosition,
+        subRange: to._subPosition - _subPosition);
   }
 
   TimelineRange from(TimelinePosition from) {
-    return TimelineRange.fromRange(position - from.position);
+    return TimelineRange(
+        baseRange: _basePosition - from._basePosition,
+        subRange: _subPosition - from._subPosition);
   }
 
   bool operator ==(dynamic right) {
@@ -61,51 +66,51 @@ class TimelinePosition {
   }
 
   TimelinePosition operator +(TimelineRange right) {
-    var ret = TimelinePosition(
-        basePosition: this.basePosition, subPosition: this._subPosition);
-    ret.position += right.range;
-    return ret;
+    return TimelinePosition(
+        basePosition: _basePosition + right._baseRange,
+        subPosition: _subPosition + right._subRange);
   }
 
   TimelinePosition operator -(TimelineRange right) {
-    var ret = TimelinePosition(
-        basePosition: this.basePosition, subPosition: this._subPosition);
-    ret.position -= right.range;
-    return ret;
+    return TimelinePosition(
+        basePosition: _basePosition - right._baseRange,
+        subPosition: _subPosition - right._subRange);
   }
 }
 
 class TimelineRange {
-  late int baseRange;
-  late double _subRange;
+  late final int _baseRange;
+  late final double _subRange;
+
+  static final TimelineRange zero = TimelineRange();
+
+  TimelineRange({int baseRange = 0, double subRange = 0}) {
+    var f = range.floor();
+    _baseRange = baseRange + f;
+    _subRange = range - f;
+  }
 
   TimelineRange.fromRange(double range) {
-    this.range = range;
+    var f = range.floor();
+    _baseRange = f;
+    _subRange = range - f;
   }
 
-  TimelineRange({this.baseRange = 0, double subRange = 0}) {
-    this.subRange = subRange;
+  TimelineRange.fromDuration(Duration duration,
+      {double millisecondsParUnit = 1000}) {
+    var range = duration.inMicroseconds * 0.001 / millisecondsParUnit;
+    var f = range.floor();
+    _baseRange = f;
+    _subRange = range - f;
   }
 
+  int get baseRange => _baseRange;
   double get subRange => _subRange;
-  set subRange(double value) {
-    _subRange = value.clamp(0.0, 0.999999);
-  }
-
   double get range => baseRange + subRange;
-  set range(double value) {
-    var f = value.floor();
-    baseRange = f;
-    _subRange = value - f;
-  }
 
-  Duration getAsDuration(double millisecondsParUnit) {
-    var ms = (range * millisecondsParUnit).toInt();
-    return Duration(milliseconds: ms);
-  }
-
-  void setAsDuration(double millisecondsParUnit, Duration value) {
-    this.range = value.inMicroseconds * 0.001 / millisecondsParUnit;
+  Duration getAsDuration({double millisecondsParUnit = 1000}) {
+    var ms = (range * millisecondsParUnit * 1000).toInt();
+    return Duration(microseconds: ms);
   }
 
   bool operator ==(dynamic right) {
@@ -137,28 +142,44 @@ class TimelineRange {
   TimelineRange operator -(TimelineRange right) {
     return TimelineRange.fromRange(range - right.range);
   }
-  
+
   TimelineRange operator -() {
     return TimelineRange.fromRange(-range);
   }
 }
 
 class TimelinePositionRange {
-  late TimelinePosition start;
-  late TimelinePosition end;
+  late final TimelinePosition _start;
+  late final TimelinePosition _end;
 
-  TimelinePositionRange(this.start, this.end);
-  TimelinePositionRange.fromRange(this.start, TimelineRange range) {
-    end = start + range;
+  TimelinePositionRange(this._start, this._end);
+  TimelinePositionRange.fromRange(this._start, TimelineRange range) {
+    _end = _start + range;
   }
 
-  bool get isNegative => end < start;
-  TimelineRange get range => start.to(end);
-  set range(TimelineRange value) => end = start + value;
+  TimelinePosition get start => _start;
+  TimelinePosition get end => _end;
+  bool get isNegative => _end < _start;
+  TimelineRange get range => _start.to(_end);
 
-  void flip(){
-    var s = start;
-    start = end;
-    end = s;
+  TimelinePositionRange flip() {
+    return TimelinePositionRange(_end, _start);
+  }
+
+  TimelinePositionRange shift(TimelineRange shift) {
+    return set(start: this._start + shift, end: this._end + shift);
+  }
+
+  TimelinePositionRange move({
+    TimelineRange? start,
+    TimelineRange? end,
+  }) {
+    return set(
+        start: this._start + (start ?? TimelineRange.zero),
+        end: this._end + (end ?? TimelineRange.zero));
+  }
+
+  TimelinePositionRange set({TimelinePosition? start, TimelinePosition? end}) {
+    return TimelinePositionRange(start ?? this._start, end ?? this._end);
   }
 }
