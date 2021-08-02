@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'timeline_element.dart';
 import 'timeline_times.dart';
 
-class SingleTimeline extends StatelessWidget {
+class TimelineTrack extends StatelessWidget {
   late final List<TimelineElement> elements;
 
-  factory SingleTimeline.test() {
+  factory TimelineTrack.test() {
     var key1 = GlobalKey<TimelineElementState>();
     var key2 = GlobalKey<TimelineElementState>();
     var key3 = GlobalKey<TimelineElementState>();
@@ -32,11 +32,11 @@ class SingleTimeline extends StatelessWidget {
       ),
     ];
 
-    return SingleTimeline(elements);
+    return TimelineTrack(elements);
   }
 
-  SingleTimeline.empty({Key? key}) : this([], key: key);
-  SingleTimeline(this.elements, {Key? key}) : super(key: key);
+  TimelineTrack.empty({Key? key}) : this([], key: key);
+  TimelineTrack(this.elements, {Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
