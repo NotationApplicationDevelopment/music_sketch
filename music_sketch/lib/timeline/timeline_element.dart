@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
+import 'timeline_data.dart';
 import 'timeline_times.dart';
 
-class TimelineElement extends StatefulWidget {
+class TimelineElement<T> extends StatefulWidget {
   final TimelinePositionRange positionRange;
-  final GlobalKey<TimelineElementState>? stateKey;
-  final GlobalKey<TimelineElementState>? nextKey;
-  final GlobalKey<TimelineElementState>? prevKey;
-
-  TimelineElement(this.positionRange,
-      {this.stateKey, this.nextKey, this.prevKey})
+  final GlobalKey<TimelineElementState<T>>? stateKey;
+  final GlobalKey<TimelineElementState<T>>? nextKey;
+  final GlobalKey<TimelineElementState<T>>? prevKey;
+  TimelineElement(this.positionRange, this.stateKey,
+      {this.nextKey, this.prevKey})
       : super(key: stateKey);
 
   @override
@@ -17,8 +17,10 @@ class TimelineElement extends StatefulWidget {
       TimelineElementState(positionRange, nextKey: nextKey, prevKey: prevKey);
 }
 
-class TimelineElementState extends State<TimelineElement> {
+class TimelineElementState<T> extends State<TimelineElement<T>>
+    implements TimelineDataFactry<T> {
   late TimelinePositionRange _positionRange;
+  late final TimelineElementData<T> _elementData;
   late double _width;
   late double _space;
   double _widthUnit = 100;
@@ -27,6 +29,10 @@ class TimelineElementState extends State<TimelineElement> {
 
   TimelineElementState? get _next => nextKey?.currentState;
   TimelineElementState? get _prev => prevKey?.currentState;
+  T? get additionalInfo => _elementData.info;
+  set additionalInfo(T? value) {
+    _elementData.info = value;
+  }
 
   TimelineElementState(TimelinePositionRange positionRange,
       {GlobalKey<TimelineElementState>? prevKey,
@@ -34,6 +40,7 @@ class TimelineElementState extends State<TimelineElement> {
     this.prevKey = prevKey;
     this.nextKey = nextKey;
     _positionRange = positionRange;
+    _elementData = TimelineElementData<T>(_positionRange, null);
     _positionRangeUpdate(setState: false);
   }
 
@@ -115,6 +122,7 @@ class TimelineElementState extends State<TimelineElement> {
         shift(TimelineRange.fromRange(-_positionRange.start.position));
         update();
       }
+      _elementData.positionRange = _positionRange;
     }
 
     if (setState) {
@@ -161,6 +169,13 @@ class TimelineElementState extends State<TimelineElement> {
         ],
       ),
     );
+  }
+
+  @override
+  List<List<TimelineElementData<T>>> getDatas() {
+    return [
+      [_elementData]
+    ];
   }
 }
 

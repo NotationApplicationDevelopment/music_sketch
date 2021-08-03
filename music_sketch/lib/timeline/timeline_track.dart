@@ -1,38 +1,40 @@
 import 'package:flutter/material.dart';
+import 'timeline_data.dart';
 import 'timeline_element.dart';
 import 'timeline_times.dart';
 
-class TimelineTrack extends StatelessWidget {
-  late final List<TimelineElement> elements;
+class TimelineTrack<T> extends StatelessWidget
+    implements TimelineDataFactry<T> {
+  late final List<TimelineElement<T>> elements;
 
   factory TimelineTrack.test() {
-    var key1 = GlobalKey<TimelineElementState>();
-    var key2 = GlobalKey<TimelineElementState>();
-    var key3 = GlobalKey<TimelineElementState>();
+    var key1 = GlobalKey<TimelineElementState<T>>();
+    var key2 = GlobalKey<TimelineElementState<T>>();
+    var key3 = GlobalKey<TimelineElementState<T>>();
 
     var elements = [
-      TimelineElement(
+      TimelineElement<T>(
         TimelinePositionRange(TimelinePosition.fromPosition(1),
             TimelinePosition.fromPosition(2.5)),
-        stateKey: key1,
+        key1,
         nextKey: key2,
       ),
-      TimelineElement(
+      TimelineElement<T>(
         TimelinePositionRange(
             TimelinePosition.fromPosition(4), TimelinePosition.fromPosition(7)),
+        key2,
         prevKey: key1,
-        stateKey: key2,
         nextKey: key3,
       ),
-      TimelineElement(
+      TimelineElement<T>(
         TimelinePositionRange(TimelinePosition.fromPosition(7),
             TimelinePosition.fromPosition(10)),
+        key3,
         prevKey: key2,
-        stateKey: key3,
       ),
     ];
 
-    return TimelineTrack(elements);
+    return TimelineTrack<T>(elements);
   }
 
   TimelineTrack.empty({Key? key}) : this([], key: key);
@@ -43,5 +45,13 @@ class TimelineTrack extends StatelessWidget {
     return Container(
         decoration: BoxDecoration(border: Border.all(color: Colors.blueAccent)),
         child: Row(children: elements));
+  }
+
+  @override
+  List<List<TimelineElementData<T>>> getDatas() {
+    var d = elements
+        .map((e) => e.stateKey!.currentState!.getDatas()[0][0])
+        .toList();
+    return [d];
   }
 }

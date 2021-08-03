@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
-import 'single_timeline.dart';
+import 'timeline_data.dart';
+import 'timeline_track.dart';
 
-class MultiTimeline extends StatelessWidget {
-  late final List<SingleTimeline> lines;
+class TimelineEvents<T> extends StatelessWidget  implements  TimelineDataFactry<T> {
+  late final List<TimelineTrack<T>> lines;
 
-  MultiTimeline.test(int lineCount, {Key? key}) : super(key: key) {
+  TimelineEvents.test(int lineCount, {Key? key}) : super(key: key) {
     lines =
-        List<SingleTimeline>.generate(lineCount, (i) => SingleTimeline.test());
+        List<TimelineTrack<T>>.generate(lineCount, (i) => TimelineTrack<T>.test());
   }
 
-  MultiTimeline.empty(int lineCount, {Key? key}) : super(key: key) {
+  TimelineEvents.empty(int lineCount, {Key? key}) : super(key: key) {
     lines =
-        List<SingleTimeline>.generate(lineCount, (i) => SingleTimeline.empty());
+        List<TimelineTrack<T>>.generate(lineCount, (i) => TimelineTrack<T>.empty());
   }
 
   @override
@@ -19,5 +20,11 @@ class MultiTimeline extends StatelessWidget {
     return Column(
       children: lines,
     );
+  }
+
+  @override
+  List<List<TimelineElementData<T>>> getDatas() {
+    var d = lines.map((e)=> e.getDatas()[0]).toList();
+    return d;
   }
 }
