@@ -50,7 +50,7 @@ class TimelineElementState<T> extends State<TimelineElement<T>>
     } else {
       shift = _checkLeft(shift)!;
     }
-    _positionRange = _positionRange.shift(shift);
+    _positionRange = _positionRange.shifted(shift);
     _positionRangeUpdate();
     _next?._positionRangeUpdate();
   }
@@ -58,7 +58,7 @@ class TimelineElementState<T> extends State<TimelineElement<T>>
   void move({TimelineRange? start, TimelineRange? end}) {
     start = _checkLeft(start);
     end = _checkRight(end);
-    _positionRange = _positionRange.move(start: start, end: end);
+    _positionRange = _positionRange.moved(start: start, end: end);
     _positionRangeUpdate();
     _next?._positionRangeUpdate();
   }
@@ -107,7 +107,7 @@ class TimelineElementState<T> extends State<TimelineElement<T>>
   void _positionRangeUpdate({bool setState = true}) {
     void update() {
       if (_positionRange.isNegative) {
-        _positionRange = _positionRange.flip();
+        _positionRange = _positionRange.fliped();
       }
 
       _width = _widthUnit * _positionRange.range.range;
