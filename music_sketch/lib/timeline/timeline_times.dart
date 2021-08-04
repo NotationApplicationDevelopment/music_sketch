@@ -2,25 +2,21 @@ class TimelinePosition {
   late final int _basePosition;
   late final double _subPosition;
 
-  TimelinePosition({int basePosition = 0, double subPosition = 0}) {
+  TimelinePosition(int basePosition, double subPosition) {
     var f = subPosition.floor();
     _basePosition = basePosition + f;
     _subPosition = subPosition - f;
   }
 
-  TimelinePosition.fromPosition(double position) {
-    var f = position.floor();
-    _basePosition = f;
-    _subPosition = position - f;
-  }
+  TimelinePosition.fromPosition(double position) : this(0, position);
 
   TimelinePosition.fromDateTime(DateTime dateTime, DateTime zero,
-      {double millisecondsParUnit = 1000}) {
-    var d = dateTime.difference(zero);
-    var f = (d.inMicroseconds * 0.001 / millisecondsParUnit).floor();
-    _basePosition = f;
-    _subPosition = position - f;
-  }
+      {double millisecondsParUnit = 1000})
+      : this(
+            0,
+            dateTime.difference(zero).inMicroseconds *
+                0.001 /
+                millisecondsParUnit);
 
   int get basePosition => _basePosition;
   double get subPosition => _subPosition;
@@ -63,42 +59,32 @@ class TimelinePosition {
 
   TimelinePosition operator +(TimelineRange right) {
     return TimelinePosition(
-        basePosition: _basePosition + right._baseRange,
-        subPosition: _subPosition + right._subRange);
+        _basePosition + right._baseRange, _subPosition + right._subRange);
   }
 
   TimelinePosition operator -(TimelineRange right) {
     return TimelinePosition(
-        basePosition: _basePosition - right._baseRange,
-        subPosition: _subPosition - right._subRange);
+        _basePosition - right._baseRange, _subPosition - right._subRange);
   }
 }
 
 class TimelineRange {
-  int _baseRange = 0;
-  double _subRange = 0.0;
+  late final int _baseRange;
+  late final double _subRange;
 
   static final TimelineRange zero = TimelineRange(0, 0);
 
   TimelineRange(int baseRange, double subRange) {
-    var f = range.floor();
+    var f = subRange.floor();
     _baseRange = baseRange + f;
-    _subRange = range - f;
+    _subRange = subRange - f;
   }
 
-  TimelineRange.fromRange(double range) {
-    var f = range.floor();
-    _baseRange = f;
-    _subRange = range - f;
-  }
+  TimelineRange.fromRange(double range) : this(0, range);
 
   TimelineRange.fromDuration(Duration duration,
-      {double millisecondsParUnit = 1000}) {
-    var range = duration.inMicroseconds * 0.001 / millisecondsParUnit;
-    var f = range.floor();
-    _baseRange = f;
-    _subRange = range - f;
-  }
+      {double millisecondsParUnit = 1000})
+      : this(0, duration.inMicroseconds * 0.001 / millisecondsParUnit);
 
   int get baseRange => _baseRange;
   double get subRange => _subRange;
@@ -148,34 +134,43 @@ class TimelinePositionRange {
   late final TimelinePosition _start;
   late final TimelinePosition _end;
 
-  TimelinePositionRange(this._start, this._end);
-  TimelinePositionRange.fromRange(this._start, TimelineRange range) {
-    _end = _start + range;
+  TimelinePositionRange(TimelinePosition start, TimelinePosition end) {
+    _start = start;
+    _end = end;
   }
+
+  TimelinePositionRange.fromRange(TimelinePosition start, TimelineRange range)
+      : this(start, start + range);
 
   TimelinePosition get start => _start;
   TimelinePosition get end => _end;
   bool get isNegative => _end < _start;
+  bool get isPositive => _end > _start;
+  bool get isZeroLength => _end == _start;
   TimelineRange get range => _start.to(_end);
 
-  TimelinePositionRange flip() {
+  TimelinePositionRange fliped() {
     return TimelinePositionRange(_end, _start);
   }
 
-  TimelinePositionRange shift(TimelineRange shift) {
-    return set(start: this._start + shift, end: this._end + shift);
+  TimelinePositionRange shifted(TimelineRange shift) {
+    return TimelinePositionRange(this._start + shift, this._end + shift);
   }
 
-  TimelinePositionRange move({
+  TimelinePositionRange moved({
     TimelineRange? start,
     TimelineRange? end,
   }) {
-    return set(
-        start: this._start + (start ?? TimelineRange.zero),
-        end: this._end + (end ?? TimelineRange.zero));
+    return TimelinePositionRange(this._start + (start ?? TimelineRange.zero),
+        this._end + (end ?? TimelineRange.zero));
   }
 
-  TimelinePositionRange set({TimelinePosition? start, TimelinePosition? end}) {
-    return TimelinePositionRange(start ?? this._start, end ?? this._end);
+  bool operator ==(dynamic right) {
+    return right is TimelinePositionRange &&
+        _start == right._start &&
+        _end == right._end;
   }
+
+  @override
+  int get hashCode => _start.hashCode ^ _end.hashCode;
 }
