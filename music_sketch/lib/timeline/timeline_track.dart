@@ -7,7 +7,7 @@ class TimelineTrack<T> extends StatelessWidget
     implements TimelineDataFactry<T> {
   late final List<TimelineElement<T>> elements;
 
-  factory TimelineTrack.test() {
+  factory TimelineTrack.sample() {
     var key1 = GlobalKey<TimelineElementState<T>>();
     var key2 = GlobalKey<TimelineElementState<T>>();
     var key3 = GlobalKey<TimelineElementState<T>>();

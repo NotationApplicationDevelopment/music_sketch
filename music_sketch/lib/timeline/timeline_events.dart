@@ -6,9 +6,9 @@ class TimelineEvents<T> extends StatelessWidget
     implements TimelineDataFactry<T> {
   late final List<TimelineTrack<T>> lines;
 
-  TimelineEvents.test(int lineCount, {Key? key}) : super(key: key) {
+  TimelineEvents.sample(int lineCount, {Key? key}) : super(key: key) {
     lines = List<TimelineTrack<T>>.generate(
-        lineCount, (i) => TimelineTrack<T>.test());
+        lineCount, (i) => TimelineTrack<T>.sample());
   }
 
   TimelineEvents.empty(int lineCount, {Key? key}) : super(key: key) {
