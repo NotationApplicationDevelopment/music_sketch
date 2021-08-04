@@ -20,18 +20,17 @@ class TimelineData<T>{
 
 	void update(){
 		List<List<TimelineElementData<T>>> newDatas = factry.getDatas();
-		int length = dataList.length;
-    int newLength = newDatas.length;
+		int newLength = newDatas.length;
     
-    while(length < newLength){
+    while(dataList.length < newLength){
       dataList.add([]);
     }
 
-    while(length > newLength){
+    while(dataList.length > newLength){
       dataList.removeLast();
     }
 
-		for(int i = 0; i < length; i++){
+		for(int i = 0; i < newLength; i++){
 			var data = dataList[i];
       var newData = newDatas[i];
 			data.clear();
