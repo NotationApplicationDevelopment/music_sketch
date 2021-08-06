@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
+import 'timeline_data.dart';
 import 'timeline_times.dart';
 
-class TimelineElement extends StatefulWidget {
+class TimelineElement<T> extends StatefulWidget {
   final TimelinePositionRange positionRange;
-  final GlobalKey<TimelineElementState>? stateKey;
-  final GlobalKey<TimelineElementState>? nextKey;
-  final GlobalKey<TimelineElementState>? prevKey;
-
-  TimelineElement(this.positionRange,
-      {this.stateKey, this.nextKey, this.prevKey})
+  final GlobalKey<TimelineElementState<T>>? stateKey;
+  final GlobalKey<TimelineElementState<T>>? nextKey;
+  final GlobalKey<TimelineElementState<T>>? prevKey;
+  TimelineElement(this.positionRange, this.stateKey,
+      {this.nextKey, this.prevKey})
       : super(key: stateKey);
 
   @override
@@ -17,16 +17,30 @@ class TimelineElement extends StatefulWidget {
       TimelineElementState(positionRange, nextKey: nextKey, prevKey: prevKey);
 }
 
-class TimelineElementState extends State<TimelineElement> {
+class TimelineElementState<T> extends State<TimelineElement<T>>
+    implements TimelineDataFactry<T> {
   late TimelinePositionRange _positionRange;
+  late final TimelineElementData<T> _elementData;
   late double _width;
   late double _space;
   double _widthUnit = 100;
   GlobalKey<TimelineElementState>? nextKey;
   GlobalKey<TimelineElementState>? prevKey;
+  _MyButton? _endButton;
+  _MyButton? _startButton;
+  _MyButton? _moveButton;
 
+  TimelinePositionRange get positionRange => _positionRange;
   TimelineElementState? get _next => nextKey?.currentState;
   TimelineElementState? get _prev => prevKey?.currentState;
+  T? get additionalInfo => _elementData.info;
+  set additionalInfo(T? value) {
+    _elementData.info = value;
+  }
+
+  _MyButton? get endButton => _endButton;
+  _MyButton? get startButton => _startButton;
+  _MyButton? get moveButton => _moveButton;
 
   TimelineElementState(TimelinePositionRange positionRange,
       {GlobalKey<TimelineElementState>? prevKey,
@@ -34,6 +48,7 @@ class TimelineElementState extends State<TimelineElement> {
     this.prevKey = prevKey;
     this.nextKey = nextKey;
     _positionRange = positionRange;
+    _elementData = TimelineElementData<T>(_positionRange, null);
     _positionRangeUpdate(setState: false);
   }
 
@@ -43,7 +58,7 @@ class TimelineElementState extends State<TimelineElement> {
     } else {
       shift = _checkLeft(shift)!;
     }
-    _positionRange = _positionRange.shift(shift);
+    _positionRange = _positionRange.shifted(shift);
     _positionRangeUpdate();
     _next?._positionRangeUpdate();
   }
@@ -51,7 +66,7 @@ class TimelineElementState extends State<TimelineElement> {
   void move({TimelineRange? start, TimelineRange? end}) {
     start = _checkLeft(start);
     end = _checkRight(end);
-    _positionRange = _positionRange.move(start: start, end: end);
+    _positionRange = _positionRange.moved(start: start, end: end);
     _positionRangeUpdate();
     _next?._positionRangeUpdate();
   }
@@ -100,7 +115,7 @@ class TimelineElementState extends State<TimelineElement> {
   void _positionRangeUpdate({bool setState = true}) {
     void update() {
       if (_positionRange.isNegative) {
-        _positionRange = _positionRange.flip();
+        _positionRange = _positionRange.fliped();
       }
 
       _width = _widthUnit * _positionRange.range.range;
@@ -115,6 +130,7 @@ class TimelineElementState extends State<TimelineElement> {
         shift(TimelineRange.fromRange(-_positionRange.start.position));
         update();
       }
+      _elementData.positionRange = _positionRange;
     }
 
     if (setState) {
@@ -141,17 +157,17 @@ class TimelineElementState extends State<TimelineElement> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _MyButton(() {
+                  _startButton = _MyButton(() {
                     move(start: TimelineRange.fromRange(-0.5));
                   }, () {
                     move(start: TimelineRange.fromRange(0.5));
                   }),
-                  _MyButton(() {
+                  _moveButton = _MyButton(() {
                     shift(TimelineRange.fromRange(-0.5));
                   }, () {
                     shift(TimelineRange.fromRange(0.5));
                   }),
-                  _MyButton(() {
+                  _endButton = _MyButton(() {
                     move(end: TimelineRange.fromRange(-0.5));
                   }, () {
                     move(end: TimelineRange.fromRange(0.5));
@@ -162,13 +178,29 @@ class TimelineElementState extends State<TimelineElement> {
       ),
     );
   }
+
+  @override
+  List<List<TimelineElementData<T>>> getDatas() {
+    return [
+      [_elementData]
+    ];
+  }
 }
 
 class _MyButton extends StatelessWidget {
-  final VoidCallback onPressedL;
-  final VoidCallback onPressedR;
-  const _MyButton(this.onPressedL, this.onPressedR, {Key? key})
-      : super(key: key);
+  final MaterialButton left;
+  final MaterialButton right;
+
+  const _MyButton.init(this.left, this.right, Key? key) : super(key: key);
+
+  factory _MyButton(VoidCallback onPressedL, VoidCallback onPressedR,
+      {Key? key}) {
+    var left = MaterialButton(
+        color: Colors.redAccent, onPressed: onPressedL, child: Text("<"));
+    var right = MaterialButton(
+        color: Colors.redAccent, onPressed: onPressedR, child: Text(">"));
+    return _MyButton.init(left, right, key);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -177,14 +209,12 @@ class _MyButton extends StatelessWidget {
         ButtonTheme(
             child: SizedBox(
           width: 20,
-          child: MaterialButton(
-              color: Colors.redAccent, onPressed: onPressedL, child: Text("<")),
+          child: left,
         )),
         ButtonTheme(
             child: SizedBox(
           width: 20,
-          child: MaterialButton(
-              color: Colors.redAccent, onPressed: onPressedR, child: Text(">")),
+          child: right,
         )),
       ],
     );
