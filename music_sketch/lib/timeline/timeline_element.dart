@@ -56,7 +56,7 @@ class TimelineElementState<T> extends State<TimelineElement<T>>
     _selectedDecoration = selectedDecoration ??
         BoxDecoration(
             borderRadius: BorderRadius.circular(5),
-            border: Border.all(color: Colors.red.shade900, width: 2),
+            border: Border.all(color: Colors.redAccent.shade200, width: 2),
             color: Colors.redAccent.shade100);
 
     _child = child;
@@ -153,26 +153,34 @@ class TimelineElementState<T> extends State<TimelineElement<T>>
           }
           _doAllElement((e) {
             Future(() {
-              e.setState(() {
-                e.isSelected = e == this;
-              });
+              bool s = e == this;
+              if(e.isSelected != s){
+                e.setState(() {
+                  e.isSelected = s;
+                });
+              }
             });
           });
         },
         onLongPress: () {
           trackState?.setTopElement(this);
-          setState(() {
-            isSelected = !isSelected;
-          });
+          if(!isSelected){
+            setState(() {
+              isSelected = true;
+            });
+          }
         },
         onHorizontalDragStart: (details) {
           if (!isSelected) {
             trackState?.setTopElement(this);
             _doAllElement((e) {
               Future(() {
-                e.setState(() {
-                  e.isSelected = e == this;
-                });
+                bool s = e == this;
+                if(e.isSelected != s){
+                  e.setState(() {
+                    e.isSelected = e == this;
+                  });
+                }
               });
             });
           }
