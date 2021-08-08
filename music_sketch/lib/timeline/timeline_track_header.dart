@@ -28,7 +28,7 @@ class _TimelineTrackHeaderState extends State<TimelineTrackHeader> {
           borderRadius: BorderRadius.circular(5),
           border: Border.all(color: Colors.black, width: 1),
           color: Colors.grey.shade200),
-      height: 30,
+      height: 10,
       child: SingleChildScrollView(
         scrollDirection: Axis.vertical,
         child: SingleChildScrollView(
