@@ -6,9 +6,9 @@ import 'package:music_sketch/timeline/timeline_track.dart';
 import 'timeline_data.dart';
 import 'timeline_times.dart';
 
-class TimelineElement<T> extends StatefulWidget {
+class TimelineElement extends StatefulWidget {
   final TimelinePositionRange positionRange;
-  final T? additionalInfo;
+  final dynamic additionalInfo;
   final BoxDecoration? decoration;
   final BoxDecoration? selectedDecoration;
   final Widget? child;
@@ -21,16 +21,16 @@ class TimelineElement<T> extends StatefulWidget {
       : super(key: UniqueKey());
 
   @override
-  TimelineElementState<T> createState() {
-    return TimelineElementState<T>(
+  TimelineElementState createState() {
+    return TimelineElementState(
         positionRange, child, additionalInfo, decoration, selectedDecoration);
   }
 }
 
-class TimelineElementState<T> extends State<TimelineElement<T>>
-    implements TimelineDataFactry<T> {
-  TimelineTrackState<T>? trackState;
-  late final TimelineElementData<T> _elementData;
+class TimelineElementState extends State<TimelineElement>
+    implements TimelineDataFactry {
+  TimelineTrackState? trackState;
+  late final TimelineElementData _elementData;
   late BoxDecoration _decoration;
   late BoxDecoration _selectedDecoration;
   Widget? _child;
@@ -44,10 +44,10 @@ class TimelineElementState<T> extends State<TimelineElement<T>>
   TimelineElementState(
       TimelinePositionRange positionRange,
       Widget? child,
-      T? additionalInfo,
+      dynamic additionalInfo,
       BoxDecoration? decoration,
       BoxDecoration? selectedDecoration) {
-    _elementData = TimelineElementData<T>(positionRange, additionalInfo);
+    _elementData = TimelineElementData(positionRange, additionalInfo);
     _decoration = decoration ??
         BoxDecoration(
             borderRadius: BorderRadius.circular(5),
@@ -64,8 +64,8 @@ class TimelineElementState<T> extends State<TimelineElement<T>>
   }
 
   TimelinePositionRange get positionRange => _elementData.positionRange;
-  T? get additionalInfo => _elementData.info;
-  set additionalInfo(T? value) {
+  dynamic get additionalInfo => _elementData.info;
+  set additionalInfo(dynamic value) {
     _elementData.info = value;
   }
 
@@ -114,13 +114,13 @@ class TimelineElementState<T> extends State<TimelineElement<T>>
     }
   }
 
-  void _doAllElement(void function(TimelineElementState<T> elementState)) {
+  void _doAllElement(void function(TimelineElementState elementState)) {
     trackState == null ? function(this) : trackState!.doAllElement(function);
   }
 
   @override
   Widget build(BuildContext context) {
-    trackState = context.findAncestorStateOfType<TimelineTrackState<T>>();
+    trackState = context.findAncestorStateOfType<TimelineTrackState>();
     trackState?.initElement(this);
 
     var width2 = max(_width, 1.0);
@@ -152,19 +152,17 @@ class TimelineElementState<T> extends State<TimelineElement<T>>
             return;
           }
           _doAllElement((e) {
-            Future(() {
-              bool s = e == this;
-              if(e.isSelected != s){
-                e.setState(() {
-                  e.isSelected = s;
-                });
-              }
-            });
+            bool s = e == this;
+            if (e.isSelected != s) {
+              e.setState(() {
+                e.isSelected = s;
+              });
+            }
           });
         },
         onLongPress: () {
           trackState?.setTopElement(this);
-          if(!isSelected){
+          if (!isSelected) {
             setState(() {
               isSelected = true;
             });
@@ -174,14 +172,12 @@ class TimelineElementState<T> extends State<TimelineElement<T>>
           if (!isSelected) {
             trackState?.setTopElement(this);
             _doAllElement((e) {
-              Future(() {
-                bool s = e == this;
-                if(e.isSelected != s){
-                  e.setState(() {
-                    e.isSelected = e == this;
-                  });
-                }
-              });
+              bool s = e == this;
+              if (e.isSelected != s) {
+                e.setState(() {
+                  e.isSelected = e == this;
+                });
+              }
             });
           }
           var pos = details.localPosition.distance - _space;
@@ -208,11 +204,11 @@ class TimelineElementState<T> extends State<TimelineElement<T>>
             return;
           }
           _doAllElement((e) {
-            Future(() {
-              if (e._elementData.positionRange.isZeroLength) {
-                trackState?.remove(e.widget);
-              }
-            });
+            if (e._elementData.positionRange.isZeroLength) {
+              Future(() {
+                e.trackState?.remove(e.widget);
+              });
+            }
           });
         },
         onHorizontalDragUpdate: (details) {
@@ -247,7 +243,7 @@ class TimelineElementState<T> extends State<TimelineElement<T>>
   }
 
   @override
-  List<List<TimelineElementData<T>>> getDatas() {
+  List<List<TimelineElementData>> getDatas() {
     return [
       [_elementData]
     ];

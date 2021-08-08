@@ -1,25 +1,25 @@
 import 'timeline_times.dart';
-abstract class TimelineDataFactry<T> {
-  List<List<TimelineElementData<T>>> getDatas();
+abstract class TimelineDataFactry {
+  List<List<TimelineElementData>> getDatas();
 }
 
-class TimelineElementData<T>{
+class TimelineElementData{
 	TimelinePositionRange positionRange;
-	T? info;
+	dynamic info;
 
   TimelineElementData(this.positionRange, this.info);
 }
 
 class TimelineData<T>{
-	late final List<List<TimelineElementData<T>>> dataList;
-	final TimelineDataFactry<T> factry;
+	late final List<List<TimelineElementData>> dataList;
+	final TimelineDataFactry factry;
   
-  TimelineData(this.factry, {List<List<TimelineElementData<T>>>? dataList}){
+  TimelineData(this.factry, {List<List<TimelineElementData>>? dataList}){
     this.dataList = dataList ?? [];
   }
 
 	void update(){
-		List<List<TimelineElementData<T>>> newDatas = factry.getDatas();
+		List<List<TimelineElementData>> newDatas = factry.getDatas();
 		int newLength = newDatas.length;
     
     while(dataList.length < newLength){
