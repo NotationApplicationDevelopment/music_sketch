@@ -60,7 +60,7 @@ class TimelineTrackState extends State<TimelineTrack>
   TimelineEventsState? _eventsState;
   final List<TimelineElement> _elements;
   final Map<TimelineElement, TimelineElementState> _elementStates = {};
-
+  DateTime _beforeTaped = DateTime.utc(0);
   TimelineTrackState(this._elements);
 
   TimelineEventsState? get eventsState => _eventsState;
@@ -109,10 +109,40 @@ class TimelineTrackState extends State<TimelineTrack>
   Widget build(BuildContext context) {
     _eventsState = context.findAncestorStateOfType<TimelineEventsState>();
     _eventsState?.initTrack(this);
-    return Container(
-      height: 10,
+    var cont = Container(
+      constraints: BoxConstraints(minHeight: 10),
       child: Stack(
-          children: _elements.length > 0 ? _elements : [Text("Empty Track.")]),
+        children: _elements.length > 0 ? _elements : [Text("Empty Track.")],
+      ),
+    );
+
+    var gest = GestureDetector(
+      child: Container(),
+      behavior: HitTestBehavior.translucent,
+      onTapDown: (detail) {
+        _beforeTaped = DateTime.now();
+      },
+      onTapUp: (detail) {
+        var now = DateTime.now();
+        if (now.isBefore(_beforeTaped.add(Duration(milliseconds: 250)))) {
+          var pos = detail.localPosition.dx / (_eventsState?.widthUnit ?? 100);
+          print(pos);
+          var element = TimelineElement(
+            positionRange: TimelinePositionRange.fromRange(
+              TimelinePosition.fromPosition(pos),
+              TimelineRange.fromRange(0.5),
+            ),
+          );
+          add(element);
+        }
+      },
+    );
+
+    return Stack(
+      children: [
+        gest,
+        cont,
+      ],
     );
   }
 
