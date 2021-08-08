@@ -28,12 +28,12 @@ class TimelineTrack extends StatefulWidget {
       elements: elements,
       icon: Icon(Icons.audiotrack),
       trackName: const Text("tack name"),
-      additionalInfo: ElevatedButton(child: const Text("additional widget"), onPressed: (){},),
+      additionalInfo: ElevatedButton(
+        child: const Text("additional widget"),
+        onPressed: () {},
+      ),
     );
   }
-
-  TimelineTrack.empty({Widget? icon, Text? text, Widget? additional, Key? key})
-      : this(elements: [], key: key);
 
   TimelineTrack(
       {List<TimelineElement>? elements,
@@ -57,11 +57,11 @@ class TimelineTrack extends StatefulWidget {
 
 class TimelineTrackState extends State<TimelineTrack>
     implements TimelineDataFactry {
-  TimelineEventsState? eventsState;
-  final List<TimelineElement> elements;
-
+  TimelineEventsState? _eventsState;
+  final List<TimelineElement> _elements;
   final Map<TimelineElement, TimelineElementState> _elementStates = {};
-  TimelineTrackState(this.elements);
+
+  TimelineTrackState(this._elements);
 
   void initElement(TimelineElementState elementState) {
     var w = elementState.widget;
@@ -71,18 +71,18 @@ class TimelineTrackState extends State<TimelineTrack>
   void setTopElement(TimelineElementState elementState) {
     var w = elementState.widget;
     setState(() {
-      elements.remove(w);
-      elements.add(w);
+      _elements.remove(w);
+      _elements.add(w);
     });
   }
 
   void doAllElement(void function(TimelineElementState elementState)) {
-    if (eventsState == null) {
+    if (_eventsState == null) {
       for (var e in _elementStates.values) {
         function(e);
       }
     } else {
-      eventsState!.doAllTrack((state) {
+      _eventsState!.doAllTrack((state) {
         for (var e in state._elementStates.values) {
           function(e);
         }
@@ -92,24 +92,25 @@ class TimelineTrackState extends State<TimelineTrack>
 
   void add(TimelineElement element) {
     setState(() {
-      elements.add(element);
+      _elements.add(element);
     });
   }
 
   void remove(TimelineElement element) {
     setState(() {
       _elementStates.remove(element);
-      elements.remove(element);
+      _elements.remove(element);
     });
   }
 
   @override
   Widget build(BuildContext context) {
-    eventsState = context.findAncestorStateOfType<TimelineEventsState>();
-    eventsState?.initTrack(this);
+    _eventsState = context.findAncestorStateOfType<TimelineEventsState>();
+    _eventsState?.initTrack(this);
     return Container(
-      height: 30,
-      child: Stack(children: elements.length > 0 ? elements : [Text("Empty")]),
+      height: 10,
+      child: Stack(
+          children: _elements.length > 0 ? _elements : [Text("Empty Track.")]),
     );
   }
 
