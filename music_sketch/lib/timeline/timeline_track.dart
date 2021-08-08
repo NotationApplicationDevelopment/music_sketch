@@ -63,6 +63,8 @@ class TimelineTrackState extends State<TimelineTrack>
 
   TimelineTrackState(this._elements);
 
+  TimelineEventsState? get eventsState => _eventsState;
+
   void initElement(TimelineElementState elementState) {
     var w = elementState.widget;
     _elementStates[w] = elementState;

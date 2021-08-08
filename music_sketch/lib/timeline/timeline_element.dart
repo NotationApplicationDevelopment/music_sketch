@@ -29,7 +29,7 @@ class TimelineElement extends StatefulWidget {
 
 class TimelineElementState extends State<TimelineElement>
     implements TimelineDataFactry {
-  TimelineTrackState? trackState;
+  TimelineTrackState? _trackState;
   late final TimelineElementData _elementData;
   late BoxDecoration _decoration;
   late BoxDecoration _selectedDecoration;
@@ -103,6 +103,12 @@ class TimelineElementState extends State<TimelineElement>
             .shifted(TimelineRange.fromRange(-start.position));
       }
 
+      var end = _elementData.positionRange.end;
+      var trackEnd = _trackState?.eventsState?.trackEnd;
+      if (trackEnd != null && trackEnd < end) {
+        _trackState!.eventsState!.trackEnd = end;
+      }
+
       _width = _widthUnit * _elementData.positionRange.range.range;
       _space = _widthUnit * _elementData.positionRange.start.position;
     }
@@ -115,14 +121,20 @@ class TimelineElementState extends State<TimelineElement>
   }
 
   void _doAllElement(void function(TimelineElementState elementState)) {
-    trackState == null ? function(this) : trackState!.doAllElement(function);
+    _trackState == null ? function(this) : _trackState!.doAllElement(function);
   }
 
   @override
   Widget build(BuildContext context) {
-    trackState = context.findAncestorStateOfType<TimelineTrackState>();
-    trackState?.initElement(this);
-
+    _trackState = context.findAncestorStateOfType<TimelineTrackState>();
+    _trackState?.initElement(this);
+    var unit = _trackState?.eventsState?.widthUnit;
+    if (unit != null && _widthUnit != unit) {
+      print("fit unit($unit)");
+      _widthUnit = unit;
+      _width = _widthUnit * _elementData.positionRange.range.range;
+      _space = _widthUnit * _elementData.positionRange.start.position;
+    }
     var width2 = max(_width, 1.0);
     var element = Container(
       width: _space + width2,
@@ -133,7 +145,7 @@ class TimelineElementState extends State<TimelineElement>
           ),
           Container(
             decoration: isSelected ? _selectedDecoration : _decoration,
-            height: trackState == null ? 30 : null,
+            height: _trackState == null ? 30 : null,
             width: width2,
             child: _child,
           ),
@@ -144,7 +156,7 @@ class TimelineElementState extends State<TimelineElement>
     return GestureDetector(
         child: element,
         onTap: () {
-          trackState?.setTopElement(this);
+          _trackState?.setTopElement(this);
           if (isSelected) {
             setState(() {
               isSelected = false;
@@ -161,7 +173,7 @@ class TimelineElementState extends State<TimelineElement>
           });
         },
         onLongPress: () {
-          trackState?.setTopElement(this);
+          _trackState?.setTopElement(this);
           if (!isSelected) {
             setState(() {
               isSelected = true;
@@ -170,7 +182,7 @@ class TimelineElementState extends State<TimelineElement>
         },
         onHorizontalDragStart: (details) {
           if (!isSelected) {
-            trackState?.setTopElement(this);
+            _trackState?.setTopElement(this);
             _doAllElement((e) {
               bool s = e == this;
               if (e.isSelected != s) {
@@ -206,7 +218,7 @@ class TimelineElementState extends State<TimelineElement>
           _doAllElement((e) {
             if (e._elementData.positionRange.isZeroLength) {
               Future(() {
-                e.trackState?.remove(e.widget);
+                e._trackState?.remove(e.widget);
               });
             }
           });

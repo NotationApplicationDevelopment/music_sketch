@@ -1,33 +1,53 @@
 import 'package:flutter/material.dart';
+import 'package:music_sketch/timeline/timeline_times.dart';
 import 'timeline_data.dart';
 import 'timeline_track.dart';
 
 class TimelineEvents extends StatefulWidget {
   late final List<TimelineTrack> tracks;
+  late final double _trackHeight;
+  late final TimelinePosition _trackEnd;
 
-  TimelineEvents.sample(int lineCount, {Key? key}) : super(key: key) {
-    tracks =
-        List<TimelineTrack>.generate(lineCount, (i) => TimelineTrack.sample());
+  factory TimelineEvents.sample(int lineCount, {Key? key}) {
+    var tracks = List<TimelineTrack>.generate(
+      lineCount,
+      (i) => TimelineTrack.sample(),
+    );
+    var end = TimelinePosition.fromPosition(30);
+    return TimelineEvents._(tracks, end, 30, key);
   }
 
-  TimelineEvents.empty(int lineCount, {Key? key}) : super(key: key) {
-    tracks = List<TimelineTrack>.generate(lineCount, (i) => TimelineTrack());
-  }
+  TimelineEvents._(this.tracks, this._trackEnd, this._trackHeight, Key? key)
+      : super(key: key);
 
   @override
-  TimelineEventsState createState() => TimelineEventsState(tracks);
+  TimelineEventsState createState() =>
+      TimelineEventsState(tracks, _trackEnd, _trackHeight);
 }
 
 class TimelineEventsState extends State<TimelineEvents>
     implements TimelineDataFactry {
   late final List<TimelineTrack> tracks;
   final Map<TimelineTrack, TimelineTrackState> _trackStates = {};
-
   final _scrollController = ScrollController();
+  double _trackHeight;
+  TimelinePosition _trackEnd;
+  double _widthUnit = 100;
+  double _headerWidth = 150;
 
-  TimelineEventsState(this.tracks);
+  TimelineEventsState(this.tracks, this._trackEnd, this._trackHeight);
 
   ScrollController get scrollController => _scrollController;
+  double get trackHeight => _trackHeight;
+  TimelinePosition get trackEnd => _trackEnd;
+  double get widthUnit => _widthUnit;
+  double get headerWidth => _headerWidth;
+
+  set trackEnd(TimelinePosition value) {
+    setState(() {
+      _trackEnd = value;
+    });
+  }
 
   void initTrack(TimelineTrackState trackState) {
     var w = trackState.widget;
@@ -60,12 +80,13 @@ class TimelineEventsState extends State<TimelineEvents>
         return Row(
           children: [
             Container(
-              width: 150,
+              width: _headerWidth,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: tracks
                     .map(
                       (e) => Container(
+                          height: _trackHeight,
                           decoration: BoxDecoration(
                             border: Border(
                               bottom: BorderSide(color: Colors.black26),
@@ -77,7 +98,7 @@ class TimelineEventsState extends State<TimelineEvents>
               ),
             ),
             Container(
-              width: constraints.maxWidth-150,
+              width: constraints.maxWidth - _headerWidth,
               child: Scrollbar(
                 controller: _scrollController,
                 child: SingleChildScrollView(
@@ -88,6 +109,8 @@ class TimelineEventsState extends State<TimelineEvents>
                     children: tracks
                         .map(
                           (e) => Container(
+                              height: _trackHeight,
+                              width: _trackEnd.position * _widthUnit,
                               decoration: BoxDecoration(
                                 border: Border(
                                   bottom: BorderSide(color: Colors.black26),
