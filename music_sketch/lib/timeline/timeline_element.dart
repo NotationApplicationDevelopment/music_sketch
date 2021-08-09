@@ -130,7 +130,6 @@ class TimelineElementState extends State<TimelineElement>
     _trackState?.initElement(this);
     var unit = _trackState?.eventsState?.widthUnit;
     if (unit != null && _widthUnit != unit) {
-      print("fit unit($unit)");
       _widthUnit = unit;
       _width = _widthUnit * _elementData.positionRange.range.range;
       _space = _widthUnit * _elementData.positionRange.start.position;
