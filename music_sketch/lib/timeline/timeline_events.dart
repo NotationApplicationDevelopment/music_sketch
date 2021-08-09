@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:music_sketch/timeline/multi_header_scroll_view.dart';
+import 'package:music_sketch/timeline/timeline_scale.dart';
 import 'package:music_sketch/timeline/timeline_times.dart';
 import 'timeline_data.dart';
 import 'timeline_track.dart';
@@ -14,7 +16,7 @@ class TimelineEvents extends StatefulWidget {
       (i) => TimelineTrack.sample(),
     );
     var end = TimelinePosition.fromPosition(30);
-    return TimelineEvents._(tracks, end, 30, key);
+    return TimelineEvents._(tracks, end, 25, key);
   }
 
   TimelineEvents._(this.tracks, this._trackEnd, this._trackHeight, Key? key)
@@ -29,19 +31,22 @@ class TimelineEventsState extends State<TimelineEvents>
     implements TimelineDataFactry {
   late final List<TimelineTrack> tracks;
   final Map<TimelineTrack, TimelineTrackState> _trackStates = {};
-  final _scrollController = ScrollController();
+
   double _trackHeight;
   TimelinePosition _trackEnd;
-  double _widthUnit = 100;
+  double _widthUnit = 200;
   double _headerWidth = 150;
 
   TimelineEventsState(this.tracks, this._trackEnd, this._trackHeight);
-
-  ScrollController get scrollController => _scrollController;
   double get trackHeight => _trackHeight;
   TimelinePosition get trackEnd => _trackEnd;
   double get widthUnit => _widthUnit;
   double get headerWidth => _headerWidth;
+
+  @override
+  void initState() {
+    super.initState();
+  }
 
   set trackEnd(TimelinePosition value) {
     setState(() {
@@ -75,57 +80,53 @@ class TimelineEventsState extends State<TimelineEvents>
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: ((context, BoxConstraints constraints) {
-        return Row(
-          children: [
-            Container(
-              width: _headerWidth,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: tracks
-                    .map(
-                      (e) => Container(
-                          height: _trackHeight,
-                          decoration: BoxDecoration(
-                            border: Border(
-                              bottom: BorderSide(color: Colors.black26),
-                            ),
-                          ),
-                          child: e.header),
-                    )
-                    .toList(),
-              ),
-            ),
-            Container(
-              width: constraints.maxWidth - _headerWidth,
-              child: Scrollbar(
-                controller: _scrollController,
-                child: SingleChildScrollView(
-                  controller: _scrollController,
-                  scrollDirection: Axis.horizontal,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: tracks
-                        .map(
-                          (e) => Container(
-                              height: _trackHeight,
-                              width: _trackEnd.position * _widthUnit,
-                              decoration: BoxDecoration(
-                                border: Border(
-                                  bottom: BorderSide(color: Colors.black26),
-                                ),
-                              ),
-                              child: e),
-                        )
-                        .toList(),
+    return MultiHeaderScrollView(
+      topHeaderHeight: 30,
+      leftHeaderWidth: 150,
+      topLeftHeader: () => Text((_trackEnd.position * _widthUnit).toString()),
+      topHeader: () => Container(
+        width: _trackEnd.position * _widthUnit,
+        decoration: BoxDecoration(
+          border: Border.all(
+            width: 1,
+            color: Colors.grey,
+          ),
+        ),
+        child: TimelineScale(
+          showCount: true,
+        ),
+      ),
+      leftHeader: () => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: tracks
+            .map(
+              (e) => Container(
+                  height: _trackHeight,
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(color: Colors.black26),
+                    ),
                   ),
-                ),
-              ),
-            ),
-          ],
-        );
-      }),
+                  child: e.header),
+            )
+            .toList(),
+      ),
+      child: () => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: tracks
+            .map(
+              (e) => Container(
+                  height: _trackHeight,
+                  width: _trackEnd.position * _widthUnit,
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(color: Colors.black26),
+                    ),
+                  ),
+                  child: e),
+            )
+            .toList(),
+      ),
     );
   }
 
