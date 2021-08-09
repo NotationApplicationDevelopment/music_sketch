@@ -126,7 +126,6 @@ class TimelineTrackState extends State<TimelineTrack>
         var now = DateTime.now();
         if (now.isBefore(_beforeTaped.add(Duration(milliseconds: 250)))) {
           var pos = detail.localPosition.dx / (_eventsState?.widthUnit ?? 100);
-          print(pos);
           var element = TimelineElement(
             positionRange: TimelinePositionRange.fromRange(
               TimelinePosition.fromPosition(pos),
