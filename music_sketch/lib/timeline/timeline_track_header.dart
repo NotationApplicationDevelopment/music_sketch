@@ -5,8 +5,7 @@ class TimelineTrackHeader extends StatefulWidget {
   final Widget? icon;
   final Text? text;
   final Widget? additional;
-  const TimelineTrackHeader(
-      {this.icon, this.text, this.additional, Key? key})
+  const TimelineTrackHeader({this.icon, this.text, this.additional, Key? key})
       : super(key: key);
 
   @override
