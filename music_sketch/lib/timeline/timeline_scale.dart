@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'timeline_events.dart';
 
 class TimelineScale extends StatefulWidget {
-  final bool showCount;
   final int subSplit;
   final Color? color;
+  final bool isBack;
   TimelineScale({
-    required this.showCount,
+    this.isBack = false,
     this.subSplit = 4,
     this.color,
     Key? key,
@@ -14,16 +14,16 @@ class TimelineScale extends StatefulWidget {
 
   @override
   _TimelineScaleState createState() =>
-      _TimelineScaleState(showCount, subSplit, color ?? Colors.black);
+      _TimelineScaleState(isBack, subSplit, color ?? Colors.black);
 }
 
 class _TimelineScaleState extends State<TimelineScale> {
   TimelineEventsState? eventsState;
-  bool _showCount;
+  bool _isBack;
   int _subSplit;
   Color _color;
 
-  _TimelineScaleState(this._showCount, this._subSplit, this._color);
+  _TimelineScaleState(this._isBack, this._subSplit, this._color);
 
   @override
   Widget build(BuildContext context) {
@@ -35,18 +35,25 @@ class _TimelineScaleState extends State<TimelineScale> {
       builder: (BuildContext context, BoxConstraints constraints) {
         double height = constraints.maxHeight;
         double width = constraints.maxWidth;
-
-        var subLine = Container(width: 1, height: height, color: _color);
+        Color color = Color.fromARGB(
+          _isBack ? _color.alpha ~/ 4 : _color.alpha,
+          _color.red,
+          _color.green,
+          _color.blue,
+        );
+        var subLine = Container(width: 1, height: height, color: color);
 
         Widget mainLine(int index) {
           Widget mainLine;
-          if (_showCount) {
+          if (_isBack) {
+            mainLine = Container(width: 3, height: height, color: color);
+          } else {
             mainLine = Container(
               height: height,
               alignment: Alignment.topLeft,
               decoration: BoxDecoration(
                 border: Border(
-                  left: BorderSide(width: 3, color: _color),
+                  left: BorderSide(width: 3, color: color),
                 ),
               ),
               child: Text(
@@ -54,8 +61,6 @@ class _TimelineScaleState extends State<TimelineScale> {
                 style: TextStyle(color: _color),
               ),
             );
-          } else {
-            mainLine = Container(width: 3, height: height, color: _color);
           }
           return mainLine;
         }
@@ -73,6 +78,10 @@ class _TimelineScaleState extends State<TimelineScale> {
         );
       },
     );
+
+    if (_isBack) {
+      return cont;
+    }
 
     return GestureDetector(
       behavior: HitTestBehavior.translucent,

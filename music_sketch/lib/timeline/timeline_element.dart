@@ -28,8 +28,7 @@ class TimelineElement extends StatefulWidget {
   }
 }
 
-class TimelineElementState extends State<TimelineElement>
-    implements TimelineDataFactry {
+class TimelineElementState extends State<TimelineElement> {
   TimelineTrackState? _trackState;
   late final TimelineElementData _elementData;
   late BoxDecoration _decoration;
@@ -41,6 +40,7 @@ class TimelineElementState extends State<TimelineElement>
   int _dragMode = -1;
   double sizeChangeArea = 50;
   bool isSelected = false;
+  Offset _tapStartLocalPos = Offset.zero;
 
   TimelineElementState(
       TimelinePositionRange positionRange,
@@ -64,6 +64,7 @@ class TimelineElementState extends State<TimelineElement>
     _positionRangeUpdate(setState: false);
   }
 
+  TimelineElementData get elementData => _elementData;
   TimelinePositionRange get positionRange => _elementData.positionRange;
   dynamic get additionalInfo => _elementData.info;
   set additionalInfo(dynamic value) {
@@ -195,7 +196,11 @@ class TimelineElementState extends State<TimelineElement>
   }
 
   void _doAllElement(void function(TimelineElementState elementState)) {
-    _trackState == null ? function(this) : _trackState!.eventsState == null ? _trackState!.doAllElement(function): _trackState!.eventsState!.doAllElement(function);
+    _trackState == null
+        ? function(this)
+        : _trackState!.eventsState == null
+            ? _trackState!.doAllElement(function)
+            : _trackState!.eventsState!.doAllElement(function);
   }
 
   @override
@@ -232,6 +237,9 @@ class TimelineElementState extends State<TimelineElement>
 
     return GestureDetector(
         child: element,
+        onTapDown: (details) {
+          _tapStartLocalPos = details.localPosition;
+        },
         onTap: () {
           _trackState?.setTopElement(this);
           if (isSelected) {
@@ -258,7 +266,7 @@ class TimelineElementState extends State<TimelineElement>
           }
         },
         onHorizontalDragStart: (details) {
-          var pos = details.localPosition.distance - _space;
+          var pos = _tapStartLocalPos.dx - _space;
           if (_width <= sizeChangeArea * 3) {
             if (pos < _width * (1.0 / 3.0)) {
               _dragMode = 1;
@@ -336,12 +344,5 @@ class TimelineElementState extends State<TimelineElement>
               break;
           }
         });
-  }
-
-  @override
-  List<List<TimelineElementData>> getDatas() {
-    return [
-      [_elementData]
-    ];
   }
 }

@@ -1,7 +1,7 @@
 import 'timeline_times.dart';
 
 abstract class TimelineDataFactry {
-  List<List<TimelineElementData>> getDatas();
+  Map<String, List<TimelineElementData>> getDatas();
 }
 
 class TimelineElementData {
@@ -12,30 +12,15 @@ class TimelineElementData {
 }
 
 class TimelineData<T> {
-  late final List<List<TimelineElementData>> dataList;
+  late final Map<String, List<TimelineElementData>> dataList;
   final TimelineDataFactry factry;
 
-  TimelineData(this.factry, {List<List<TimelineElementData>>? dataList}) {
-    this.dataList = dataList ?? [];
+  TimelineData(this.factry, {Map<String, List<TimelineElementData>>? dataList}) {
+    this.dataList = dataList ?? {};
   }
 
   void update() {
-    List<List<TimelineElementData>> newDatas = factry.getDatas();
-    int newLength = newDatas.length;
-
-    while (dataList.length < newLength) {
-      dataList.add([]);
-    }
-
-    while (dataList.length > newLength) {
-      dataList.removeLast();
-    }
-
-    for (int i = 0; i < newLength; i++) {
-      var data = dataList[i];
-      var newData = newDatas[i];
-      data.clear();
-      data.addAll(newData);
-    }
+    dataList.clear();
+    dataList.addAll(factry.getDatas());
   }
 }

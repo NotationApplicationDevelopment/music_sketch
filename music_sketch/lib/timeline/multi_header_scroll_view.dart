@@ -34,8 +34,8 @@ class _MultiHeaderScrollViewState extends State<MultiHeaderScrollView> {
   final Widget? Function()? leftHeader;
   final Widget? Function()? topHeader;
   final Widget? Function()? topLeftHeader;
-  final double leftHeaderWidth;
-  final double topHeaderHeight;
+  double leftHeaderWidth;
+  double topHeaderHeight;
   final Widget Function() child;
 
   late LinkedScrollControllerGroup _scrollH;
@@ -65,8 +65,16 @@ class _MultiHeaderScrollViewState extends State<MultiHeaderScrollView> {
     topH = _scrollH.addAndGet();
   }
 
+  void sizeChange() async {
+    setState(() {
+      leftHeaderWidth = widget.leftHeaderWidth;
+      topHeaderHeight = widget.topHeaderHeight;
+    });
+  }
+
   @override
   Widget build(BuildContext baseContext) {
+    sizeChange();
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         var mainWidth = constraints.maxWidth - leftHeaderWidth;

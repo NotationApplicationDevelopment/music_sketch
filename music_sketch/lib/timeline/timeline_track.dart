@@ -1,15 +1,15 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:music_sketch/timeline/timeline_events.dart';
-import 'timeline_data.dart';
 import 'timeline_element.dart';
 import 'timeline_times.dart';
 import 'timeline_track_header.dart';
 
 class TimelineTrack extends StatefulWidget {
+  final String trackName;
   late final List<TimelineElement> elements;
   late final TimelineTrackHeader header;
-  factory TimelineTrack.sample() {
+  factory TimelineTrack.sample(String trackName) {
     var elements = [
       TimelineElement(
           positionRange: TimelinePositionRange(TimelinePosition.fromPosition(1),
@@ -26,8 +26,9 @@ class TimelineTrack extends StatefulWidget {
 
     return TimelineTrack(
       elements: elements,
+      trackName: trackName,
       icon: Icon(Icons.audiotrack),
-      trackName: const Text("tack name"),
+      headerText: Text(trackName),
       additionalInfo: ElevatedButton(
         child: const Text("additional widget"),
         onPressed: () {},
@@ -37,8 +38,9 @@ class TimelineTrack extends StatefulWidget {
 
   TimelineTrack(
       {List<TimelineElement>? elements,
+      required this.trackName,
       Widget? icon,
-      Text? trackName,
+      Text? headerText,
       Widget? additionalInfo,
       Key? key,
       Key? headerKey})
@@ -46,23 +48,23 @@ class TimelineTrack extends StatefulWidget {
     this.elements = elements ?? [];
     header = TimelineTrackHeader(
         icon: icon,
-        text: trackName,
+        text: headerText,
         additional: additionalInfo,
         key: headerKey);
   }
 
   @override
-  TimelineTrackState createState() => TimelineTrackState(elements);
+  TimelineTrackState createState() => TimelineTrackState(elements, trackName);
 }
 
-class TimelineTrackState extends State<TimelineTrack>
-    implements TimelineDataFactry {
+class TimelineTrackState extends State<TimelineTrack> {
+  final String trackName;
   TimelineEventsState? _eventsState;
   final List<TimelineElement> _elements;
-  final Map<TimelineElement, TimelineElementState> _elementStates = {};
+  final Map<TimelineElement, TimelineElementState> elementStates = {};
   DateTime _beforeTapDown = DateTime.utc(0);
-  DateTime _beforeTapUp = DateTime.utc(0);
-  TimelineTrackState(this._elements);
+
+  TimelineTrackState(this._elements, this.trackName);
 
   TimelinePositionRange? _selectAreaValue;
 
@@ -70,7 +72,7 @@ class TimelineTrackState extends State<TimelineTrack>
 
   void initElement(TimelineElementState elementState) {
     var w = elementState.widget;
-    _elementStates[w] = elementState;
+    elementStates[w] = elementState;
   }
 
   void setTopElement(TimelineElementState elementState) {
@@ -82,7 +84,7 @@ class TimelineTrackState extends State<TimelineTrack>
   }
 
   void doAllElement(void function(TimelineElementState elementState)) {
-    for (var e in _elementStates.values) {
+    for (var e in elementStates.values) {
       function(e);
     }
   }
@@ -95,13 +97,13 @@ class TimelineTrackState extends State<TimelineTrack>
 
   void remove(TimelineElement element) {
     setState(() {
-      _elementStates.remove(element);
+      elementStates.remove(element);
       _elements.remove(element);
     });
   }
 
   void selectArea(TimelinePositionRange area) {
-    for (var e in _elementStates.values) {
+    for (var e in elementStates.values) {
       if (area.contain(e.positionRange)) {
         e.setState(() {
           e.isSelected = true;
@@ -162,9 +164,10 @@ class TimelineTrackState extends State<TimelineTrack>
           ? _selectAreaValue!.fliped()
           : _selectAreaValue!;
       if (area.start.position < 0) {
-        area = TimelinePositionRange(TimelinePosition.fromPosition(0) , area.end);
+        area =
+            TimelinePositionRange(TimelinePosition.fromPosition(0), area.end);
       }
-      if (_eventsState!= null && area.end > _eventsState!.trackEnd) {
+      if (_eventsState != null && area.end > _eventsState!.trackEnd) {
         area = TimelinePositionRange(area.start, _eventsState!.trackEnd);
       }
       var widthUnit = _eventsState?.widthUnit ?? 100;
@@ -199,7 +202,7 @@ class TimelineTrackState extends State<TimelineTrack>
         var now = DateTime.now();
         var pos = detail.localPosition.dx / (_eventsState?.widthUnit ?? 100);
         var timePos = TimelinePosition.fromPosition(pos);
-        _beforeTapUp = now;
+
         if (now.isBefore(_beforeTapDown.add(Duration(milliseconds: 250)))) {
           var element = TimelineElement(
             positionRange: TimelinePositionRange.fromRange(
@@ -221,10 +224,5 @@ class TimelineTrackState extends State<TimelineTrack>
         cont,
       ],
     );
-  }
-
-  @override
-  List<List<TimelineElementData>> getDatas() {
-    return [_elementStates.values.map((e) => e.getDatas()[0][0]).toList()];
   }
 }

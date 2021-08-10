@@ -14,7 +14,7 @@ class TimelineEvents extends StatefulWidget {
   factory TimelineEvents.sample(int lineCount, {Key? key}) {
     var tracks = List<TimelineTrack>.generate(
       lineCount,
-      (i) => TimelineTrack.sample(),
+      (i) => TimelineTrack.sample("Track $i"),
     );
     var end = TimelinePosition.fromPosition(30);
     return TimelineEvents._(tracks, end, 40, key);
@@ -36,7 +36,8 @@ class TimelineEventsState extends State<TimelineEvents>
   double _trackHeight;
   TimelinePosition _trackEnd;
   double _widthUnit = 50;
-  double _headerWidth = 50;
+  double _headerWidth = 100;
+  bool _sideOpen = false;
 
   TimelineEventsState(this.tracks, this._trackEnd, this._trackHeight);
   double get trackHeight => _trackHeight;
@@ -84,24 +85,33 @@ class TimelineEventsState extends State<TimelineEvents>
       tracks.remove(track);
     });
   }
-
+  var key = UniqueKey();
   @override
   Widget build(BuildContext context) {
     return MultiHeaderScrollView(
+      key: key,
       topHeaderHeight: _trackHeight,
       leftHeaderWidth: _headerWidth,
-      topLeftHeader: () => Text((_trackEnd.position * _widthUnit).toString()),
+      topLeftHeader: () => Switch(value: _sideOpen, onChanged: (value){
+        _sideOpen = value;
+        if(value){
+          setState(() {
+            _headerWidth = 150;
+          });
+        }else{
+          setState(() {
+            _headerWidth = 50;
+          });
+        }
+      }),
       topHeader: () => Container(
         width: _trackEnd.position * _widthUnit,
         decoration: BoxDecoration(
-          border: Border.all(
-            width: 1,
-            color: Colors.grey,
+          border: Border(
+            bottom: BorderSide(width: 1, color: Colors.grey),
           ),
         ),
-        child: TimelineScale(
-          showCount: true,
-        ),
+        child: TimelineScale(),
       ),
       leftHeader: () => Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -118,27 +128,47 @@ class TimelineEventsState extends State<TimelineEvents>
             )
             .toList(),
       ),
-      child: () => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: tracks
-            .map(
-              (e) => Container(
-                  height: _trackHeight,
-                  width: _trackEnd.position * _widthUnit,
-                  decoration: BoxDecoration(
-                    border: Border(
-                      bottom: BorderSide(color: Colors.black26),
-                    ),
-                  ),
-                  child: e),
-            )
-            .toList(),
+      child: () => Container(
+        width: _trackEnd.position * _widthUnit,
+        height: _trackHeight * tracks.length,
+        
+        child: Stack(
+          children: [
+            TimelineScale(
+              isBack: true,
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: tracks
+                  .map(
+                    (e) => Container(
+                        width: _trackEnd.position * _widthUnit,
+                        height: _trackHeight,
+                        decoration: BoxDecoration(
+                          border: Border(
+                            bottom: BorderSide(color: Colors.black26),
+                          ),
+                        ),
+                        child: e),
+                  )
+                  .toList(),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   @override
-  List<List<TimelineElementData>> getDatas() {
-    return trackStates.values.map((value) => value.getDatas()[0]).toList();
+  Map<String, List<TimelineElementData>> getDatas() {
+    Map<String, List<TimelineElementData>> data = {};
+    for (var track in trackStates.values) {
+      var trackData = <TimelineElementData>[];
+      for (var element in track.elementStates.values) {
+        trackData.add(element.elementData);
+      }
+      data[track.trackName] = trackData;
+    }
+    return data;
   }
 }
