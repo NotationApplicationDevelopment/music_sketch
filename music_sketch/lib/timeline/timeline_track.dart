@@ -60,8 +60,11 @@ class TimelineTrackState extends State<TimelineTrack>
   TimelineEventsState? _eventsState;
   final List<TimelineElement> _elements;
   final Map<TimelineElement, TimelineElementState> _elementStates = {};
-  DateTime _beforeTaped = DateTime.utc(0);
+  DateTime _beforeTapDown = DateTime.utc(0);
+  DateTime _beforeTapUp = DateTime.utc(0);
   TimelineTrackState(this._elements);
+
+  TimelinePositionRange? _selectAreaValue;
 
   TimelineEventsState? get eventsState => _eventsState;
 
@@ -79,16 +82,8 @@ class TimelineTrackState extends State<TimelineTrack>
   }
 
   void doAllElement(void function(TimelineElementState elementState)) {
-    if (_eventsState == null) {
-      for (var e in _elementStates.values) {
-        function(e);
-      }
-    } else {
-      _eventsState!.doAllTrack((state) {
-        for (var e in state._elementStates.values) {
-          function(e);
-        }
-      });
+    for (var e in _elementStates.values) {
+      function(e);
     }
   }
 
@@ -105,36 +100,119 @@ class TimelineTrackState extends State<TimelineTrack>
     });
   }
 
+  void selectArea(TimelinePositionRange area) {
+    for (var e in _elementStates.values) {
+      if (area.contain(e.positionRange)) {
+        e.setState(() {
+          e.isSelected = true;
+        });
+      }
+    }
+  }
+
+  void onLongPressStart(LongPressStartDetails detail) {
+    var pos = detail.localPosition.dx / (_eventsState?.widthUnit ?? 100);
+    var timePos = TimelinePosition.fromPosition(pos);
+    if (_selectAreaValue == null) {
+      _selectAreaValue = TimelinePositionRange(timePos, timePos);
+    }
+  }
+
+  void onLongPressMoveUpdate(LongPressMoveUpdateDetails detail) {
+    var pos = detail.localPosition.dx / (_eventsState?.widthUnit ?? 100);
+    var timePos = TimelinePosition.fromPosition(pos);
+    if (_selectAreaValue != null) {
+      setState(() {
+        _selectAreaValue =
+            TimelinePositionRange(_selectAreaValue!.start, timePos);
+      });
+    }
+  }
+
+  void onLongPressEnd(LongPressEndDetails detail) {
+    var pos = detail.localPosition.dx / (_eventsState?.widthUnit ?? 100);
+    var timePos = TimelinePosition.fromPosition(pos);
+    if (_selectAreaValue != null) {
+      var area = TimelinePositionRange(_selectAreaValue!.start, timePos);
+      if (area.isNegative) {
+        area = area.fliped();
+      }
+      selectArea(area);
+
+      setState(() {
+        _selectAreaValue = null;
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     _eventsState = context.findAncestorStateOfType<TimelineEventsState>();
     _eventsState?.initTrack(this);
-    var cont = Container(
-      constraints: BoxConstraints(minHeight: 10),
-      child: Stack(
-        children: _elements.length > 0 ? _elements : [Text("Empty Track.")],
-      ),
-    );
+    Container cont;
+    if (_selectAreaValue == null) {
+      cont = Container(
+        constraints: BoxConstraints(minHeight: 10),
+        child: Stack(
+          children: _elements,
+        ),
+      );
+    } else {
+      var area = _selectAreaValue!.isNegative
+          ? _selectAreaValue!.fliped()
+          : _selectAreaValue!;
+      if (area.start.position < 0) {
+        area = TimelinePositionRange(TimelinePosition.fromPosition(0) , area.end);
+      }
+      if (_eventsState!= null && area.end > _eventsState!.trackEnd) {
+        area = TimelinePositionRange(area.start, _eventsState!.trackEnd);
+      }
+      var widthUnit = _eventsState?.widthUnit ?? 100;
+      cont = Container(
+        constraints: BoxConstraints(minHeight: 10),
+        child: Stack(
+          children: _elements.cast<Widget>() +
+              [
+                Row(
+                  children: [
+                    Container(
+                      width: area.start.position * widthUnit,
+                    ),
+                    Container(
+                      color: Color.fromARGB(50, 0, 0, 255),
+                      width: area.range.range * widthUnit,
+                    ),
+                  ],
+                )
+              ],
+        ),
+      );
+    }
 
     var gest = GestureDetector(
       child: Container(),
       behavior: HitTestBehavior.translucent,
       onTapDown: (detail) {
-        _beforeTaped = DateTime.now();
+        _beforeTapDown = DateTime.now();
       },
       onTapUp: (detail) {
         var now = DateTime.now();
-        if (now.isBefore(_beforeTaped.add(Duration(milliseconds: 250)))) {
-          var pos = detail.localPosition.dx / (_eventsState?.widthUnit ?? 100);
+        var pos = detail.localPosition.dx / (_eventsState?.widthUnit ?? 100);
+        var timePos = TimelinePosition.fromPosition(pos);
+        _beforeTapUp = now;
+        if (now.isBefore(_beforeTapDown.add(Duration(milliseconds: 250)))) {
           var element = TimelineElement(
             positionRange: TimelinePositionRange.fromRange(
-              TimelinePosition.fromPosition(pos),
+              timePos,
               TimelineRange.fromRange(0.5),
             ),
           );
           add(element);
         }
       },
+      onLongPressStart: onLongPressStart,
+      onLongPressMoveUpdate: onLongPressMoveUpdate,
+      onLongPressEnd: onLongPressEnd,
     );
 
     return Stack(
