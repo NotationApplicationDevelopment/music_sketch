@@ -18,6 +18,7 @@ class TimelineScale extends StatefulWidget {
 }
 
 class _TimelineScaleState extends State<TimelineScale> {
+  TimelineEventsState? eventsState;
   bool _showCount;
   int _subSplit;
   Color _color;
@@ -26,11 +27,11 @@ class _TimelineScaleState extends State<TimelineScale> {
 
   @override
   Widget build(BuildContext context) {
-    var eventsState = context.findAncestorStateOfType<TimelineEventsState>();
+    eventsState = context.findAncestorStateOfType<TimelineEventsState>();
 
     var widthUnit = eventsState?.widthUnit ?? 100;
 
-    return LayoutBuilder(
+    var cont = LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         double height = constraints.maxHeight;
         double width = constraints.maxWidth;
@@ -49,7 +50,7 @@ class _TimelineScaleState extends State<TimelineScale> {
                 ),
               ),
               child: Text(
-                " ${index+1}",
+                " ${index + 1}",
                 style: TextStyle(color: _color),
               ),
             );
@@ -62,12 +63,51 @@ class _TimelineScaleState extends State<TimelineScale> {
         return Stack(
           children: List.generate(
             (_subSplit * width / widthUnit).floor() + 1,
-            (index){ 
-              Widget w = (index % _subSplit == 0) ?  mainLine(index~/_subSplit) : subLine;
+            (index) {
+              Widget w = (index % _subSplit == 0)
+                  ? mainLine(index ~/ _subSplit)
+                  : subLine;
               return Positioned(left: index * widthUnit / _subSplit, child: w);
             },
           ),
         );
+      },
+    );
+
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      child: cont,
+      onDoubleTap: () {
+        eventsState = context.findAncestorStateOfType<TimelineEventsState>();
+        if (eventsState != null) {
+          eventsState!.doAllElement((state) {
+            state.setState(() {
+              state.isSelected = false;
+            });
+          });
+        }
+      },
+      onLongPressStart: (detail) {
+        eventsState = context.findAncestorStateOfType<TimelineEventsState>();
+        if (eventsState != null) {
+          for (var track in eventsState!.trackStates.values) {
+            track.onLongPressStart(detail);
+          }
+        }
+      },
+      onLongPressMoveUpdate: (detail) {
+        if (eventsState != null) {
+          for (var track in eventsState!.trackStates.values) {
+            track.onLongPressMoveUpdate(detail);
+          }
+        }
+      },
+      onLongPressEnd: (detail) {
+        if (eventsState != null) {
+          for (var track in eventsState!.trackStates.values) {
+            track.onLongPressEnd(detail);
+          }
+        }
       },
     );
   }
