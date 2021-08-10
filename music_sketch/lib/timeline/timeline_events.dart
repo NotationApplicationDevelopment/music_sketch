@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:music_sketch/timeline/multi_header_scroll_view.dart';
+import 'package:music_sketch/timeline/timeline_element.dart';
 import 'package:music_sketch/timeline/timeline_scale.dart';
 import 'package:music_sketch/timeline/timeline_times.dart';
 import 'timeline_data.dart';
@@ -16,7 +17,7 @@ class TimelineEvents extends StatefulWidget {
       (i) => TimelineTrack.sample(),
     );
     var end = TimelinePosition.fromPosition(30);
-    return TimelineEvents._(tracks, end, 25, key);
+    return TimelineEvents._(tracks, end, 40, key);
   }
 
   TimelineEvents._(this.tracks, this._trackEnd, this._trackHeight, Key? key)
@@ -30,12 +31,12 @@ class TimelineEvents extends StatefulWidget {
 class TimelineEventsState extends State<TimelineEvents>
     implements TimelineDataFactry {
   late final List<TimelineTrack> tracks;
-  final Map<TimelineTrack, TimelineTrackState> _trackStates = {};
+  final Map<TimelineTrack, TimelineTrackState> trackStates = {};
 
   double _trackHeight;
   TimelinePosition _trackEnd;
-  double _widthUnit = 200;
-  double _headerWidth = 150;
+  double _widthUnit = 50;
+  double _headerWidth = 50;
 
   TimelineEventsState(this.tracks, this._trackEnd, this._trackHeight);
   double get trackHeight => _trackHeight;
@@ -56,12 +57,18 @@ class TimelineEventsState extends State<TimelineEvents>
 
   void initTrack(TimelineTrackState trackState) {
     var w = trackState.widget;
-    _trackStates[w] = trackState;
+    trackStates[w] = trackState;
   }
 
   void doAllTrack(void function(TimelineTrackState state)) {
-    for (var e in _trackStates.values) {
+    for (var e in trackStates.values) {
       function(e);
+    }
+  }
+
+  void doAllElement(void function(TimelineElementState state)) {
+    for (var e in trackStates.values) {
+      e.doAllElement(function);
     }
   }
 
@@ -73,7 +80,7 @@ class TimelineEventsState extends State<TimelineEvents>
 
   void remove(TimelineTrack track) {
     setState(() {
-      _trackStates.remove(track);
+      trackStates.remove(track);
       tracks.remove(track);
     });
   }
@@ -81,8 +88,8 @@ class TimelineEventsState extends State<TimelineEvents>
   @override
   Widget build(BuildContext context) {
     return MultiHeaderScrollView(
-      topHeaderHeight: 30,
-      leftHeaderWidth: 150,
+      topHeaderHeight: _trackHeight,
+      leftHeaderWidth: _headerWidth,
       topLeftHeader: () => Text((_trackEnd.position * _widthUnit).toString()),
       topHeader: () => Container(
         width: _trackEnd.position * _widthUnit,
@@ -132,6 +139,6 @@ class TimelineEventsState extends State<TimelineEvents>
 
   @override
   List<List<TimelineElementData>> getDatas() {
-    return _trackStates.values.map((value) => value.getDatas()[0]).toList();
+    return trackStates.values.map((value) => value.getDatas()[0]).toList();
   }
 }
