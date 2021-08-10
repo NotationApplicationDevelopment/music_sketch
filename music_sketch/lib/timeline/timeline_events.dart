@@ -85,21 +85,23 @@ class TimelineEventsState extends State<TimelineEvents>
       tracks.remove(track);
     });
   }
-  var key = UniqueKey();
   @override
   Widget build(BuildContext context) {
     return MultiHeaderScrollView(
-      key: key,
-      topHeaderHeight: _trackHeight,
+      topHeaderHeight: 30,
       leftHeaderWidth: _headerWidth,
       topLeftHeader: () => Switch(value: _sideOpen, onChanged: (value){
         _sideOpen = value;
         if(value){
           setState(() {
+            _trackHeight = 50;
+            _widthUnit = 200;
             _headerWidth = 150;
           });
         }else{
           setState(() {
+            _trackHeight = 20;
+            _widthUnit = 50;
             _headerWidth = 50;
           });
         }
