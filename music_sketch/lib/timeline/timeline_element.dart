@@ -97,13 +97,13 @@ class TimelineElementState extends State<TimelineElement>
       var start = _elementData.positionRange.start;
       var end = _elementData.positionRange.end;
       if (start >= _elementData.positionRange.end) {
-        _elementData.positionRange = TimelinePositionRange(end, start);
         switch (_dragMode) {
           case 1:
-            _dragMode = 2;
+            _elementData.positionRange = TimelinePositionRange(end, end);
             break;
           case 2:
-            _dragMode = 1;
+            _elementData.positionRange = TimelinePositionRange(start, start);
+            break;
         }
       }
 
@@ -195,7 +195,7 @@ class TimelineElementState extends State<TimelineElement>
   }
 
   void _doAllElement(void function(TimelineElementState elementState)) {
-    _trackState == null ? function(this) : _trackState!.doAllElement(function);
+    _trackState == null ? function(this) : _trackState!.eventsState == null ? _trackState!.doAllElement(function): _trackState!.eventsState!.doAllElement(function);
   }
 
   @override
