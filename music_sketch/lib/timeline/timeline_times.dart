@@ -165,6 +165,26 @@ class TimelinePositionRange {
         this._end + (end ?? TimelineRange.zero));
   }
 
+  bool contain(TimelinePositionRange other) {
+    if (this.start <= other.start &&
+        this.start <= other.end &&
+        other.start <= this.end &&
+        other.end <= this.end) {
+      return true;
+    }
+    return false;
+  }
+
+  bool isOverlapTo(TimelinePositionRange other) {
+    if (other.start < this.start && other.end < this.start) {
+      return false;
+    }
+    if (other.start > this.end && other.end > this.end) {
+      return false;
+    }
+    return true;
+  }
+
   bool operator ==(dynamic right) {
     return right is TimelinePositionRange &&
         _start == right._start &&
