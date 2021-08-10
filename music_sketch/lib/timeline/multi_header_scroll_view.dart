@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:linked_scroll_controller/linked_scroll_controller.dart';
-import 'package:music_sketch/main.dart';
 
 class MultiHeaderScrollView extends StatefulWidget {
   final Widget? Function()? leftHeader;
