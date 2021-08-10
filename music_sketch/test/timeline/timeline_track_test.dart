@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:music_sketch/timeline/timeline_track.dart';
 
 void main() {
-  var element = TimelineTrack.sample();
+  var element = TimelineTrack.sample("0");
 
   testWidgets('timeline_track_widget', (WidgetTester tester) async {
     // Build our app and trigger a frame.
