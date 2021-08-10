@@ -2,18 +2,18 @@ import 'package:music_sketch/timeline/timeline_data.dart';
 import 'package:music_sketch/timeline/timeline_times.dart';
 import 'package:test/test.dart';
 
-class _TestFuctry extends TimelineDataFactry<String> {
-  List<List<TimelineElementData<String>>> datas = [[]];
+class _TestFuctry extends TimelineDataFactry {
+  List<List<TimelineElementData>> datas = [[]];
   @override
-  List<List<TimelineElementData<String>>> getDatas() {
+  List<List<TimelineElementData>> getDatas() {
     return datas;
   }
 
-  void add(TimelineElementData<String> data) {
+  void add(TimelineElementData data) {
     datas[0].add(data);
   }
 
-  void set(int index, TimelineElementData<String> data) {
+  void set(int index, TimelineElementData data) {
     datas[0][index] = data;
   }
 
@@ -25,10 +25,10 @@ class _TestFuctry extends TimelineDataFactry<String> {
 void main() {
   var fact = _TestFuctry();
   var timelineData = TimelineData<String>(fact);
-  var data1 = TimelineElementData<String>(
+  var data1 = TimelineElementData(
       TimelinePositionRange(TimelinePosition(0, 0), TimelinePosition(0, 0)),
       "test1");
-  var data2 = TimelineElementData<String>(
+  var data2 = TimelineElementData(
       TimelinePositionRange(TimelinePosition(0, 0), TimelinePosition(0, 0)),
       "test2");
 
