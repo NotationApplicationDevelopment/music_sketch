@@ -8,230 +8,181 @@ import 'timeline_data.dart';
 import 'timeline_times.dart';
 
 class TimelineElement extends StatefulWidget {
-  final TimelinePositionRange positionRange;
-  final dynamic additionalInfo;
+  final TimelineElementData elementData;
   final BoxDecoration? decoration;
   final BoxDecoration? selectedDecoration;
   final Widget? child;
   TimelineElement(
-      {required this.positionRange,
+      {required this.elementData,
       this.child,
-      this.additionalInfo,
       this.decoration,
-      this.selectedDecoration})
-      : super(key: UniqueKey());
+      this.selectedDecoration,
+      Key? key})
+      : super(key: key);
 
   @override
   TimelineElementState createState() {
-    return TimelineElementState(
-        positionRange, child, additionalInfo, decoration, selectedDecoration);
+    return TimelineElementState();
   }
 }
 
 class TimelineElementState extends State<TimelineElement> {
   TimelineTrackState? _trackState;
-  late final TimelineElementData _elementData;
-  late BoxDecoration _decoration;
-  late BoxDecoration _selectedDecoration;
-  Widget? _child;
-  late double _width;
-  late double _space;
-  double _widthUnit = 100;
+  TimelinePosition _trackEnd = TimelinePosition.fromPosition(100);
   int _dragMode = -1;
   double sizeChangeArea = 50;
   bool isSelected = false;
   Offset _tapStartLocalPos = Offset.zero;
 
-  TimelineElementState(
-      TimelinePositionRange positionRange,
-      Widget? child,
-      dynamic additionalInfo,
-      BoxDecoration? decoration,
-      BoxDecoration? selectedDecoration) {
-    _elementData = TimelineElementData(positionRange, additionalInfo);
-    _decoration = decoration ??
-        BoxDecoration(
-            borderRadius: BorderRadius.circular(5),
-            border: Border.all(color: Colors.red.shade900, width: 2),
-            color: Colors.red);
-    _selectedDecoration = selectedDecoration ??
-        BoxDecoration(
-            borderRadius: BorderRadius.circular(5),
-            border: Border.all(color: Colors.redAccent.shade200, width: 2),
-            color: Colors.redAccent.shade100);
-
-    _child = child;
-    _positionRangeUpdate(setState: false);
+  TimelineElementData get elementData => widget.elementData;
+  TimelinePositionRange get positionRange => widget.elementData.positionRange;
+  set positionRange(TimelinePositionRange value) {
+    widget.elementData.positionRange = value;
   }
 
-  TimelineElementData get elementData => _elementData;
-  TimelinePositionRange get positionRange => _elementData.positionRange;
-  dynamic get additionalInfo => _elementData.info;
+  dynamic get additionalInfo => widget.elementData.info;
   set additionalInfo(dynamic value) {
-    _elementData.info = value;
+    widget.elementData.info = value;
+  }
+
+  double get widthUnit => _trackState?.widthUnit ?? 100;
+  TimelinePosition get trackEnd => _trackState?.trackEnd ?? _trackEnd;
+  set trackEnd(TimelinePosition value) {
+    _trackState?.trackEnd = _trackEnd = value;
+  }
+
+  Widget? get child => widget.child;
+
+  BoxDecoration get decoration {
+    return widget.decoration ??
+        BoxDecoration(
+          borderRadius: BorderRadius.circular(5),
+          border: Border.all(color: Colors.red.shade900, width: 2),
+          color: Colors.red,
+        );
+  }
+
+  BoxDecoration get selectedDecoration {
+    return widget.selectedDecoration ??
+        BoxDecoration(
+          borderRadius: BorderRadius.circular(5),
+          border: Border.all(color: Colors.redAccent.shade200, width: 2),
+          color: Colors.redAccent.shade100,
+        );
   }
 
   void shift(TimelineRange shift) {
-    _elementData.positionRange = _elementData.positionRange.shifted(shift);
-    _positionRangeUpdate();
+    positionRange = positionRange.shifted(shift);
   }
 
   void move({TimelineRange? start, TimelineRange? end}) {
-    _elementData.positionRange =
-        _elementData.positionRange.moved(start: start, end: end);
-    _positionRangeUpdate();
+    positionRange = positionRange.moved(start: start, end: end);
   }
 
   void set({TimelinePosition? start, TimelinePosition? end}) {
-    TimelineRange? sr, se;
-    if (start != null) {
-      sr = _elementData.positionRange.start.to(start);
-    }
-    if (end != null) {
-      se = _elementData.positionRange.end.to(end);
-    }
-    move(start: sr, end: se);
+    positionRange = positionRange.seted(start: start, end: end);
   }
 
-  void _positionRangeUpdate({bool setState = true}) {
-    void update() {
-      var start = _elementData.positionRange.start;
-      var end = _elementData.positionRange.end;
-      if (start >= _elementData.positionRange.end) {
-        switch (_dragMode) {
-          case 1:
-            _elementData.positionRange = TimelinePositionRange(end, end);
-            break;
-          case 2:
-            _elementData.positionRange = TimelinePositionRange(start, start);
-            break;
-        }
+  void _positionRangeCheck() {
+    var start = positionRange.start;
+    var end = positionRange.end;
+    if (start >= positionRange.end) {
+      switch (_dragMode) {
+        case 1:
+          positionRange = TimelinePositionRange(end, end);
+          break;
+        case 2:
+          positionRange = TimelinePositionRange(start, start);
+          break;
       }
+    }
 
-      if (start.position < 0) {
-        var delta = start.to(TimelinePosition.fromPosition(0));
-        switch (_dragMode) {
-          case -1:
-          case 0:
-            _elementData.positionRange =
-                _elementData.positionRange.shifted(delta);
-            end = _elementData.positionRange.end;
-            break;
+    if (start.position < 0) {
+      var delta = start.to(TimelinePosition.fromPosition(0));
+      switch (_dragMode) {
+        case -1:
+        case 0:
+          positionRange = positionRange.shifted(delta);
+          end = positionRange.end;
+          break;
 
-          case 1:
-            _elementData.positionRange =
-                _elementData.positionRange.moved(start: delta);
-            break;
-        }
+        case 1:
+          positionRange = positionRange.moved(start: delta);
+          break;
       }
+    }
 
-      var trackEnd = _trackState?.eventsState?.trackEnd;
-      if (trackEnd != null && trackEnd < end) {
-        int minCount = (end.position + 1).floor();
-        double count = minCount.toDouble();
-        bool ok = true;
-        showDialog(
-          context: context,
-          builder: (_) {
-            return AlertDialog(
-              title: Text("Expands the area."),
-              content: Text("Expands the area, for the operation."),
-              actions: <Widget>[
-                TextFormField(
-                  initialValue: minCount.toString(),
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  decoration: InputDecoration(
-                    labelText: "Range of area(min value : $minCount)",
-                  ),
-                  autovalidateMode: AutovalidateMode.always,
-                  validator: (value) {
-                    if (value == null) {
-                      value = "";
-                    }
-                    final n = num.tryParse(value);
-                    if (n == null || n < minCount) {
-                      ok = false;
-                      return 'min value is $minCount';
-                    }
-                    ok = true;
-                    count = n.toDouble();
+    var trackEnd = this.trackEnd;
+    if (trackEnd < end) {
+      int minCount = (end.position + 1).floor();
+      double count = minCount.toDouble();
+      bool ok = true;
+      showDialog(
+        context: context,
+        builder: (_) {
+          return AlertDialog(
+            title: Text("Expands the area."),
+            content: Text("Expands the area, for the operation."),
+            actions: <Widget>[
+              TextFormField(
+                initialValue: minCount.toString(),
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                decoration: InputDecoration(
+                  labelText: "Range of area(min value : $minCount)",
+                ),
+                autovalidateMode: AutovalidateMode.always,
+                validator: (value) {
+                  final n = num.tryParse(value ?? "");
+                  ok = n != null && minCount <= n;
+                  if (ok) {
+                    count = n!.toDouble();
                     return null;
-                  },
-                ),
-                ElevatedButton(
-                  child: Text("OK"),
-                  onPressed: () {
-                    if (!ok) {
-                      return;
-                    }
-                    _trackState!.eventsState!.trackEnd =
-                        TimelinePosition.fromPosition(count);
-                    if (setState) {
-                      Future.delayed(Duration(milliseconds: 100), () {
-                        this.setState(() {
-                          _width = _widthUnit *
-                              _elementData.positionRange.range.range;
-                        });
-                      });
-                    }
-                    Navigator.pop(context);
-                  },
-                ),
-              ],
-            );
-          },
-        );
-      }
-
-      _width = _widthUnit * _elementData.positionRange.range.range;
-      _space = _widthUnit * _elementData.positionRange.start.position;
-    }
-
-    if (setState) {
-      this.setState(update);
-    } else {
-      update();
+                  }
+                  return 'min value is $minCount';
+                },
+              ),
+              ElevatedButton(
+                child: Text("OK"),
+                onPressed: () {
+                  if (!ok) {
+                    return;
+                  }
+                  this.trackEnd = TimelinePosition.fromPosition(count);
+                  Navigator.pop(context);
+                },
+              ),
+            ],
+          );
+        },
+      );
     }
   }
 
-  void _doAllElement(void function(TimelineElementState elementState)) {
+  void _doAllElementInEvents(void function(TimelineElementState elementState)) {
     _trackState == null
         ? function(this)
-        : _trackState!.eventsState == null
-            ? _trackState!.doAllElement(function)
-            : _trackState!.eventsState!.doAllElement(function);
+        : _trackState!.doAllElementInEvents(function);
   }
 
   @override
   Widget build(BuildContext context) {
     _trackState = context.findAncestorStateOfType<TimelineTrackState>();
     _trackState?.initElement(this);
-    var unit = _trackState?.eventsState?.widthUnit;
-    var trackEnd = _trackState?.eventsState?.trackEnd;
-    if (unit != null && _widthUnit != unit) {
-      _widthUnit = unit;
-      _width = _widthUnit * _elementData.positionRange.range.range;
-      _space = _widthUnit * _elementData.positionRange.start.position;
-    }
-    if (trackEnd != null && trackEnd < _elementData.positionRange.end) {
-      _width = _widthUnit * _elementData.positionRange.start.to(trackEnd).range;
-    }
-    var width2 = max(_width, 1.0);
-    var element = Container(
-      width: _space + width2,
-      child: Row(
-        children: [
-          Container(
-            width: _space,
-          ),
-          Container(
-            decoration: isSelected ? _selectedDecoration : _decoration,
-            height: _trackState == null ? 30 : null,
-            width: width2,
-            child: _child,
-          ),
-        ],
+    var widthUnit = this.widthUnit;
+    var trackEnd = this.trackEnd;
+    var space = max(widthUnit * positionRange.start.position, 0.0);
+    var width = (widthUnit * positionRange.range.range)
+        .clamp(1.0, widthUnit * trackEnd.position - space);
+
+    var element = SizedBox(
+      width: space + width,
+      child: Container(
+        margin: EdgeInsets.only(left: space),
+        decoration: isSelected ? selectedDecoration : decoration,
+        height: _trackState == null ? 30 : null,
+        width: width,
+        child: child,
       ),
     );
 
@@ -248,7 +199,7 @@ class TimelineElementState extends State<TimelineElement> {
             });
             return;
           }
-          _doAllElement((e) {
+          _doAllElementInEvents((e) {
             bool s = e == this;
             if (e.isSelected != s) {
               e.setState(() {
@@ -266,11 +217,11 @@ class TimelineElementState extends State<TimelineElement> {
           }
         },
         onHorizontalDragStart: (details) {
-          var pos = _tapStartLocalPos.dx - _space;
-          if (_width <= sizeChangeArea * 3) {
-            if (pos < _width * (1.0 / 3.0)) {
+          var pos = _tapStartLocalPos.dx - space;
+          if (width <= sizeChangeArea * 3) {
+            if (pos < width * (1.0 / 3.0)) {
               _dragMode = 1;
-            } else if (_width * (2.0 / 3.0) < pos) {
+            } else if (width * (2.0 / 3.0) < pos) {
               _dragMode = 2;
             } else {
               _dragMode = 0;
@@ -278,7 +229,7 @@ class TimelineElementState extends State<TimelineElement> {
           } else {
             if (pos <= sizeChangeArea) {
               _dragMode = 1;
-            } else if (_width - sizeChangeArea <= pos) {
+            } else if (width - sizeChangeArea <= pos) {
               _dragMode = 2;
             } else {
               _dragMode = 0;
@@ -286,7 +237,7 @@ class TimelineElementState extends State<TimelineElement> {
           }
           if (!isSelected) {
             _trackState?.setTopElement(this);
-            _doAllElement((e) {
+            _doAllElementInEvents((e) {
               bool s = e == this;
               if (e.isSelected != s) {
                 e.setState(() {
@@ -295,7 +246,7 @@ class TimelineElementState extends State<TimelineElement> {
               }
             });
           } else {
-            _doAllElement((e) {
+            _doAllElementInEvents((e) {
               if (e.isSelected) {
                 e._dragMode = _dragMode;
               }
@@ -306,9 +257,9 @@ class TimelineElementState extends State<TimelineElement> {
           if (!isSelected) {
             return;
           }
-          _doAllElement((e) {
+          _doAllElementInEvents((e) {
             e._dragMode = -1;
-            if (e._elementData.positionRange.isZeroLength) {
+            if (e.positionRange.isZeroLength) {
               Future(() {
                 e._trackState?.remove(e.widget);
               });
@@ -319,26 +270,35 @@ class TimelineElementState extends State<TimelineElement> {
           if (!isSelected) {
             return;
           }
-          var dist = TimelineRange.fromRange(details.delta.dx / _widthUnit);
+          var dist = TimelineRange.fromRange(details.delta.dx / widthUnit);
           switch (_dragMode) {
             case 0:
-              _doAllElement((e) {
+              _doAllElementInEvents((e) {
                 if (e.isSelected) {
-                  e.shift(dist);
+                  e.setState(() {
+                    e.shift(dist);
+                    e._positionRangeCheck();
+                  });
                 }
               });
               break;
             case 1:
-              _doAllElement((e) {
+              _doAllElementInEvents((e) {
                 if (e.isSelected) {
-                  e.move(start: dist);
+                  e.setState(() {
+                    e.move(start: dist);
+                    e._positionRangeCheck();
+                  });
                 }
               });
               break;
             case 2:
-              _doAllElement((e) {
+              _doAllElementInEvents((e) {
                 if (e.isSelected) {
-                  e.move(end: dist);
+                  e.setState(() {
+                    e.move(end: dist);
+                    e._positionRangeCheck();
+                  });
                 }
               });
               break;

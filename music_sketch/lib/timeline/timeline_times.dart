@@ -164,6 +164,13 @@ class TimelinePositionRange {
     return TimelinePositionRange(this._start + (start ?? TimelineRange.zero),
         this._end + (end ?? TimelineRange.zero));
   }
+  
+  TimelinePositionRange seted({
+    TimelinePosition? start,
+    TimelinePosition? end,
+  }) {
+    return TimelinePositionRange(start ?? this._start, end ?? this._end);
+  }
 
   bool contain(TimelinePositionRange other) {
     if (this.start <= other.start &&
