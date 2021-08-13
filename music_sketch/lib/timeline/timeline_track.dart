@@ -9,7 +9,7 @@ import 'timeline_track_header.dart';
 class TimelineTrack extends StatefulWidget {
   final String trackName;
   late final List<TimelineElement> elements;
-  late final TimelineTrackHeader header;
+  late final TimelineTrackHeader? header;
   factory TimelineTrack.sample(String trackName) {
     var elements = [
       TimelineElement(
@@ -40,69 +40,74 @@ class TimelineTrack extends StatefulWidget {
         ),
       ),
     ];
-
+    var key = GlobalKey<TimelineTrackState>();
     return TimelineTrack(
+      key: key,
       elements: elements,
       trackName: trackName,
-      icon: Icon(Icons.audiotrack),
-      headerText: Text(trackName),
-      additionalInfo: ElevatedButton(
-        child: const Text("additional widget"),
-        onPressed: () {},
+      header: TimelineTrackHeader(
+        icon: Icon(Icons.audiotrack),
+        text: Text(trackName),
+        additional: ElevatedButton(
+          child: const Text("additional widget"),
+          onPressed: () {},
+        ),
       ),
     );
   }
 
-  TimelineTrack(
-      {required this.trackName,
-      List<TimelineElement>? elements,
-      Widget? icon,
-      Text? headerText,
-      Widget? additionalInfo,
-      Key? key,
-      Key? headerKey})
-      : super(key: key) {
+  TimelineTrack({
+    required this.trackName,
+    List<TimelineElement>? elements,
+    this.header,
+    Key? key,
+  }) : super(key: key) {
     this.elements = elements ?? [];
-    header = TimelineTrackHeader(
-        icon: icon,
-        text: headerText,
-        additional: additionalInfo,
-        key: headerKey);
   }
 
   @override
-  TimelineTrackState createState() => TimelineTrackState(elements, trackName);
+  TimelineTrackState createState() => TimelineTrackState();
 }
 
 class TimelineTrackState extends State<TimelineTrack> {
-  final String trackName;
+  String get trackName => widget.trackName;
+  List<TimelineElement> get _elements => widget.elements;
+
   TimelineEventsState? _eventsState;
-  final List<TimelineElement> _elements;
   final Map<TimelineElement, TimelineElementState> elementStates = {};
   DateTime _beforeTapDown = DateTime.utc(0);
   TimelinePosition _trackEnd = TimelinePosition.fromPosition(100);
-
-  TimelineTrackState(this._elements, this.trackName);
-
   TimelinePositionRange? _selectAreaValue;
 
-  double get widthUnit => _eventsState?.widthUnit ?? 100;
+  double get unitWidth => _eventsState?.unitWidth ?? 100;
   TimelinePosition get trackEnd => _eventsState?.trackEnd ?? _trackEnd;
+  double get trackWidth => unitWidth * trackEnd.position;
+  double get trackHeight => _eventsState?.trackHeight ?? 30;
   set trackEnd(TimelinePosition value) {
-    _eventsState?.trackEnd = _trackEnd = value;
+    _trackEnd = value;
+    _eventsState?.trackEnd = value;
+  }
+
+  Future<void> expanding(double min, int length) async {
+    if (_eventsState != null) {
+      await _eventsState!.expanding(min, length);
+    }else{
+      trackEnd = TimelinePosition.fromPosition(min);
+    }
   }
 
   void initElement(TimelineElementState elementState) {
-    var w = elementState.widget;
-    elementStates[w] = elementState;
+    elementStates[elementState.widget] = elementState;
   }
 
   void setTopElement(TimelineElementState elementState) {
     var w = elementState.widget;
-    setState(() {
-      _elements.remove(w);
-      _elements.add(w);
-    });
+    var index = _elements.indexOf(w);
+    if (index >= 0 && index < _elements.length - 1)
+      setState(() {
+        _elements.removeAt(index);
+        _elements.add(w);
+      });
   }
 
   void doAllElement(void function(TimelineElementState elementState)) {
@@ -141,7 +146,7 @@ class TimelineTrackState extends State<TimelineTrack> {
   }
 
   void onLongPressStart(LongPressStartDetails detail) {
-    var pos = detail.localPosition.dx / widthUnit;
+    var pos = detail.localPosition.dx / unitWidth;
     var timePos = TimelinePosition.fromPosition(pos);
     if (_selectAreaValue == null) {
       _selectAreaValue = TimelinePositionRange(timePos, timePos);
@@ -149,7 +154,7 @@ class TimelineTrackState extends State<TimelineTrack> {
   }
 
   void onLongPressMoveUpdate(LongPressMoveUpdateDetails detail) {
-    var pos = detail.localPosition.dx / widthUnit;
+    var pos = detail.localPosition.dx / unitWidth;
     var timePos = TimelinePosition.fromPosition(pos);
     if (_selectAreaValue != null) {
       setState(() {
@@ -160,7 +165,7 @@ class TimelineTrackState extends State<TimelineTrack> {
   }
 
   void onLongPressEnd(LongPressEndDetails detail) {
-    var pos = detail.localPosition.dx / widthUnit;
+    var pos = detail.localPosition.dx / unitWidth;
     var timePos = TimelinePosition.fromPosition(pos);
     if (_selectAreaValue != null) {
       var area = TimelinePositionRange(_selectAreaValue!.start, timePos);
@@ -176,59 +181,76 @@ class TimelineTrackState extends State<TimelineTrack> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  void didChangeDependencies() {
+    super.didChangeDependencies();
     _eventsState = context.findAncestorStateOfType<TimelineEventsState>();
     _eventsState?.initTrack(this);
-    Container cont;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    var unitWidth = this.unitWidth;
+    var trackHeight = this.trackHeight;
+    var list = <Widget>[];
     if (_selectAreaValue == null) {
-      cont = Container(
-        constraints: BoxConstraints(minHeight: 10),
-        child: Stack(
-          children: _elements,
-        ),
-      );
+      list = _elements
+          .map(
+            (e) => SizedBox(
+              height: trackHeight,
+              key: ValueKey(e.elementData),
+              child: e,
+            ),
+          )
+          .toList();
     } else {
+      var zero = TimelinePosition.fromPosition(0);
       var area = _selectAreaValue!.isNegative
           ? _selectAreaValue!.fliped()
           : _selectAreaValue!;
 
-      var zero = TimelinePosition.fromPosition(0);
       area = area.seted(
         start: area.start >= zero ? null : zero,
         end: area.end <= trackEnd ? null : trackEnd,
       );
 
-      var widthUnit = _eventsState?.widthUnit ?? 100;
-      cont = Container(
-        constraints: BoxConstraints(minHeight: 10),
-        child: Stack(
-          children: _elements.cast<Widget>() +
-              [
-                Row(
-                  children: [
-                    Container(
-                      width: area.start.position * widthUnit,
-                    ),
-                    Container(
-                      color: Color.fromARGB(50, 0, 0, 255),
-                      width: area.range.range * widthUnit,
-                    ),
-                  ],
-                )
-              ],
+      list = _elements
+          .map<Widget>(
+            (e) => SizedBox(
+              height: trackHeight,
+              key: ValueKey(e.elementData),
+              child: e,
+            ),
+          )
+          .toList();
+
+      list.add(
+        Padding(
+          padding: EdgeInsets.only(left: area.start.position * unitWidth),
+          child: SizedBox(
+            height: trackHeight,
+            width: area.range.range * unitWidth,
+            child: const ColoredBox(color: const Color.fromARGB(50, 0, 0, 255)),
+          ),
         ),
       );
     }
 
+    Widget cont = Stack(
+      children: list,
+    );
+
     var gest = GestureDetector(
-      child: Container(),
+      child: SizedBox(
+        width: trackWidth,
+        height: trackHeight,
+      ),
       behavior: HitTestBehavior.translucent,
       onTapDown: (detail) {
         _beforeTapDown = DateTime.now();
       },
       onTapUp: (detail) {
         var now = DateTime.now();
-        var pos = detail.localPosition.dx / widthUnit;
+        var pos = detail.localPosition.dx / this.unitWidth;
         var timePos = TimelinePosition.fromPosition(pos);
 
         if (now.isBefore(_beforeTapDown.add(Duration(milliseconds: 250)))) {

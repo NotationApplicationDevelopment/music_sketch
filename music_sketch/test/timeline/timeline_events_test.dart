@@ -8,6 +8,6 @@ void main() {
   testWidgets('timeline_events_widget', (WidgetTester tester) async {
     // Build our app and trigger a frame.
     await tester.pumpWidget(MaterialApp(
-        home: element));
+        home: Scaffold(body: element)));
   });
 }

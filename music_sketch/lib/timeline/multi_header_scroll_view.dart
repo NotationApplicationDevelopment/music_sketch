@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:linked_scroll_controller/linked_scroll_controller.dart';
 
 class MultiHeaderScrollView extends StatefulWidget {
-  final Widget? Function()? leftHeader;
-  final Widget? Function()? topHeader;
-  final Widget? Function()? topLeftHeader;
+  final Widget? leftHeader;
+  final Widget? topHeader;
+  final Widget? topLeftHeader;
   final double leftHeaderWidth;
   final double topHeaderHeight;
-  final Widget Function() child;
+  final Widget child;
 
   MultiHeaderScrollView({
     required this.child,
@@ -20,23 +20,16 @@ class MultiHeaderScrollView extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  _MultiHeaderScrollViewState createState() => _MultiHeaderScrollViewState(
-        this.child,
-        this.leftHeader,
-        this.topHeader,
-        this.topLeftHeader,
-        this.leftHeaderWidth,
-        this.topHeaderHeight,
-      );
+  _MultiHeaderScrollViewState createState() => _MultiHeaderScrollViewState();
 }
 
 class _MultiHeaderScrollViewState extends State<MultiHeaderScrollView> {
-  final Widget? Function()? leftHeader;
-  final Widget? Function()? topHeader;
-  final Widget? Function()? topLeftHeader;
-  double leftHeaderWidth;
-  double topHeaderHeight;
-  final Widget Function() child;
+  Widget? get leftHeader => widget.leftHeader;
+  Widget? get topHeader => widget.topHeader;
+  Widget? get topLeftHeader => widget.topLeftHeader;
+  double get leftHeaderWidth => widget.leftHeaderWidth;
+  double get topHeaderHeight => widget.topHeaderHeight;
+  Widget get child => widget.child;
 
   late LinkedScrollControllerGroup _scrollH;
   late LinkedScrollControllerGroup _scrollV;
@@ -45,14 +38,7 @@ class _MultiHeaderScrollViewState extends State<MultiHeaderScrollView> {
   late ScrollController mainH;
   late ScrollController topH;
 
-  _MultiHeaderScrollViewState(
-    this.child,
-    this.leftHeader,
-    this.topHeader,
-    this.topLeftHeader,
-    this.leftHeaderWidth,
-    this.topHeaderHeight,
-  );
+  _MultiHeaderScrollViewState();
 
   @override
   void initState() {
@@ -65,16 +51,8 @@ class _MultiHeaderScrollViewState extends State<MultiHeaderScrollView> {
     topH = _scrollH.addAndGet();
   }
 
-  void sizeChange() async {
-    setState(() {
-      leftHeaderWidth = widget.leftHeaderWidth;
-      topHeaderHeight = widget.topHeaderHeight;
-    });
-  }
-
   @override
   Widget build(BuildContext baseContext) {
-    sizeChange();
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         var mainWidth = constraints.maxWidth - leftHeaderWidth;
@@ -89,7 +67,7 @@ class _MultiHeaderScrollViewState extends State<MultiHeaderScrollView> {
                   //top left
                   Container(
                     height: topHeaderHeight,
-                    child: topLeftHeader?.call(),
+                    child: topLeftHeader,
                   ),
 
                   //left
@@ -98,7 +76,7 @@ class _MultiHeaderScrollViewState extends State<MultiHeaderScrollView> {
                     child: SingleChildScrollView(
                       scrollDirection: Axis.vertical,
                       controller: leftV,
-                      child: leftHeader?.call(),
+                      child: leftHeader,
                     ),
                   ),
                 ],
@@ -115,7 +93,7 @@ class _MultiHeaderScrollViewState extends State<MultiHeaderScrollView> {
                     child: SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       controller: topH,
-                      child: topHeader?.call(),
+                      child: topHeader,
                     ),
                   ),
 
@@ -128,7 +106,7 @@ class _MultiHeaderScrollViewState extends State<MultiHeaderScrollView> {
                       child: SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
                         controller: mainH,
-                        child: child(),
+                        child: child,
                       ),
                     ),
                   ),

@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
@@ -30,9 +28,14 @@ class TimelineElementState extends State<TimelineElement> {
   TimelineTrackState? _trackState;
   TimelinePosition _trackEnd = TimelinePosition.fromPosition(100);
   int _dragMode = -1;
-  double sizeChangeArea = 50;
+  double sizeChangeArea = 30;
   bool isSelected = false;
   Offset _tapStartLocalPos = Offset.zero;
+
+  @override
+  void initState() {
+    super.initState();
+  }
 
   TimelineElementData get elementData => widget.elementData;
   TimelinePositionRange get positionRange => widget.elementData.positionRange;
@@ -45,10 +48,12 @@ class TimelineElementState extends State<TimelineElement> {
     widget.elementData.info = value;
   }
 
-  double get widthUnit => _trackState?.widthUnit ?? 100;
+  double get unitWidth => _trackState?.unitWidth ?? 100;
+  double get trackHeight => _trackState?.trackHeight ?? 30;
   TimelinePosition get trackEnd => _trackState?.trackEnd ?? _trackEnd;
   set trackEnd(TimelinePosition value) {
-    _trackState?.trackEnd = _trackEnd = value;
+    _trackEnd = value;
+    _trackState?.trackEnd = value;
   }
 
   Widget? get child => widget.child;
@@ -112,50 +117,10 @@ class TimelineElementState extends State<TimelineElement> {
       }
     }
 
-    var trackEnd = this.trackEnd;
-    if (trackEnd < end) {
-      int minCount = (end.position + 1).floor();
-      double count = minCount.toDouble();
-      bool ok = true;
-      showDialog(
-        context: context,
-        builder: (_) {
-          return AlertDialog(
-            title: Text("Expands the area."),
-            content: Text("Expands the area, for the operation."),
-            actions: <Widget>[
-              TextFormField(
-                initialValue: minCount.toString(),
-                keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                decoration: InputDecoration(
-                  labelText: "Range of area(min value : $minCount)",
-                ),
-                autovalidateMode: AutovalidateMode.always,
-                validator: (value) {
-                  final n = num.tryParse(value ?? "");
-                  ok = n != null && minCount <= n;
-                  if (ok) {
-                    count = n!.toDouble();
-                    return null;
-                  }
-                  return 'min value is $minCount';
-                },
-              ),
-              ElevatedButton(
-                child: Text("OK"),
-                onPressed: () {
-                  if (!ok) {
-                    return;
-                  }
-                  this.trackEnd = TimelinePosition.fromPosition(count);
-                  Navigator.pop(context);
-                },
-              ),
-            ],
-          );
-        },
-      );
+    if (this.trackEnd < end) {
+      _trackState
+          ?.expanding(end.position.floorToDouble() + 1, 20)
+          .then((value) => setState(() {}));
     }
   }
 
@@ -166,143 +131,157 @@ class TimelineElementState extends State<TimelineElement> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  void didChangeDependencies() {
+    super.didChangeDependencies();
     _trackState = context.findAncestorStateOfType<TimelineTrackState>();
     _trackState?.initElement(this);
-    var widthUnit = this.widthUnit;
-    var trackEnd = this.trackEnd;
-    var space = max(widthUnit * positionRange.start.position, 0.0);
-    var width = (widthUnit * positionRange.range.range)
-        .clamp(1.0, widthUnit * trackEnd.position - space);
+  }
 
-    var element = SizedBox(
-      width: space + width,
-      child: Container(
-        margin: EdgeInsets.only(left: space),
+  @override
+  Widget build(BuildContext context) {
+    var unitWidth = this.unitWidth;
+    var trackEnd = unitWidth * this.trackEnd.position;
+    var space =
+        (unitWidth * positionRange.start.position).clamp(0.0, trackEnd - 1);
+    var width =
+        (unitWidth * positionRange.range.range).clamp(1.0, trackEnd - space);
+
+    Widget element = SizedBox(
+      height: trackHeight,
+      width: width,
+      child: DecoratedBox(
         decoration: isSelected ? selectedDecoration : decoration,
-        height: _trackState == null ? 30 : null,
-        width: width,
         child: child,
       ),
     );
 
-    return GestureDetector(
-        child: element,
-        onTapDown: (details) {
-          _tapStartLocalPos = details.localPosition;
-        },
-        onTap: () {
-          _trackState?.setTopElement(this);
-          if (isSelected) {
-            setState(() {
-              isSelected = false;
+    element = GestureDetector(
+      child: element,
+      onTapDown: (details) {
+        _tapStartLocalPos = details.localPosition;
+      },
+      onTap: () {
+        if (isSelected) {
+          setState(() {
+            isSelected = false;
+          });
+          return;
+        }
+        _trackState?.setTopElement(this);
+        _doAllElementInEvents((e) {
+          bool s = e == this;
+          if (e.isSelected != s) {
+            e.setState(() {
+              e.isSelected = s;
             });
-            return;
           }
+        });
+      },
+      onLongPress: () {
+        _trackState?.setTopElement(this);
+        if (!isSelected) {
+          setState(() {
+            isSelected = true;
+          });
+        }
+      },
+      onHorizontalDragDown: (details) {
+        _tapStartLocalPos = details.localPosition;
+      },
+      onHorizontalDragStart: (details) {
+        var pos = _tapStartLocalPos.dx;
+        var width = this.unitWidth * positionRange.range.range;
+        if (width <= sizeChangeArea * 3) {
+          if (pos < width * (1.0 / 3.0)) {
+            _dragMode = 1;
+          } else if (width * (2.0 / 3.0) < pos) {
+            _dragMode = 2;
+          } else {
+            _dragMode = 0;
+          }
+        } else {
+          if (pos <= sizeChangeArea) {
+            _dragMode = 1;
+          } else if (width - sizeChangeArea <= pos) {
+            _dragMode = 2;
+          } else {
+            _dragMode = 0;
+          }
+        }
+        if (!isSelected) {
+          _trackState?.setTopElement(this);
           _doAllElementInEvents((e) {
             bool s = e == this;
             if (e.isSelected != s) {
               e.setState(() {
-                e.isSelected = s;
+                e.isSelected = e == this;
               });
             }
           });
-        },
-        onLongPress: () {
-          _trackState?.setTopElement(this);
-          if (!isSelected) {
-            setState(() {
-              isSelected = true;
+        } else {
+          _doAllElementInEvents((e) {
+            if (e.isSelected) {
+              e._dragMode = _dragMode;
+            }
+          });
+        }
+      },
+      onHorizontalDragEnd: (details) {
+        if (!isSelected) {
+          return;
+        }
+        _doAllElementInEvents((e) {
+          e._dragMode = -1;
+          if (e.positionRange.isZeroLength) {
+            Future(() {
+              e._trackState?.remove(e.widget);
             });
           }
-        },
-        onHorizontalDragStart: (details) {
-          var pos = _tapStartLocalPos.dx - space;
-          if (width <= sizeChangeArea * 3) {
-            if (pos < width * (1.0 / 3.0)) {
-              _dragMode = 1;
-            } else if (width * (2.0 / 3.0) < pos) {
-              _dragMode = 2;
-            } else {
-              _dragMode = 0;
-            }
-          } else {
-            if (pos <= sizeChangeArea) {
-              _dragMode = 1;
-            } else if (width - sizeChangeArea <= pos) {
-              _dragMode = 2;
-            } else {
-              _dragMode = 0;
-            }
-          }
-          if (!isSelected) {
-            _trackState?.setTopElement(this);
+        });
+      },
+      onHorizontalDragUpdate: (details) {
+        if (!isSelected) {
+          return;
+        }
+        var dist = TimelineRange.fromRange(details.delta.dx / unitWidth);
+        switch (_dragMode) {
+          case 0:
             _doAllElementInEvents((e) {
-              bool s = e == this;
-              if (e.isSelected != s) {
+              if (e.isSelected) {
                 e.setState(() {
-                  e.isSelected = e == this;
+                  e.shift(dist);
+                  e._positionRangeCheck();
                 });
               }
             });
-          } else {
+            break;
+          case 1:
             _doAllElementInEvents((e) {
               if (e.isSelected) {
-                e._dragMode = _dragMode;
+                e.setState(() {
+                  e.move(start: dist);
+                  e._positionRangeCheck();
+                });
               }
             });
-          }
-        },
-        onHorizontalDragEnd: (details) {
-          if (!isSelected) {
-            return;
-          }
-          _doAllElementInEvents((e) {
-            e._dragMode = -1;
-            if (e.positionRange.isZeroLength) {
-              Future(() {
-                e._trackState?.remove(e.widget);
-              });
-            }
-          });
-        },
-        onHorizontalDragUpdate: (details) {
-          if (!isSelected) {
-            return;
-          }
-          var dist = TimelineRange.fromRange(details.delta.dx / widthUnit);
-          switch (_dragMode) {
-            case 0:
-              _doAllElementInEvents((e) {
-                if (e.isSelected) {
-                  e.setState(() {
-                    e.shift(dist);
-                    e._positionRangeCheck();
-                  });
-                }
-              });
-              break;
-            case 1:
-              _doAllElementInEvents((e) {
-                if (e.isSelected) {
-                  e.setState(() {
-                    e.move(start: dist);
-                    e._positionRangeCheck();
-                  });
-                }
-              });
-              break;
-            case 2:
-              _doAllElementInEvents((e) {
-                if (e.isSelected) {
-                  e.setState(() {
-                    e.move(end: dist);
-                    e._positionRangeCheck();
-                  });
-                }
-              });
-              break;
-          }
-        });
+            break;
+          case 2:
+            _doAllElementInEvents((e) {
+              if (e.isSelected) {
+                e.setState(() {
+                  e.move(end: dist);
+                  e._positionRangeCheck();
+                });
+              }
+            });
+            break;
+        }
+      },
+    );
+
+    return Padding(
+      padding: EdgeInsets.only(left: space),
+      child: element,
+    );
   }
 }

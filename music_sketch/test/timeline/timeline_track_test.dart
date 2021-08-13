@@ -7,8 +7,13 @@ void main() {
 
   testWidgets('timeline_track_widget', (WidgetTester tester) async {
     // Build our app and trigger a frame.
-    await tester.pumpWidget(MaterialApp(
+    await tester.pumpWidget(
+      MaterialApp(
         home: SingleChildScrollView(
-            scrollDirection: Axis.horizontal, child: element)));
+          scrollDirection: Axis.horizontal,
+          child: element,
+        ),
+      ),
+    );
   });
 }

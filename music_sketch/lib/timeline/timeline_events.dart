@@ -8,8 +8,8 @@ import 'timeline_track.dart';
 
 class TimelineEvents extends StatefulWidget {
   late final List<TimelineTrack> tracks;
-  late final double _trackHeight;
-  late final TimelinePosition _trackEnd;
+  late final TimelinePosition trackEnd;
+  final Map<TimelineTrack, TimelineTrackState> trackStates = {};
 
   factory TimelineEvents.sample(int lineCount, {Key? key}) {
     var tracks = List<TimelineTrack>.generate(
@@ -17,43 +17,68 @@ class TimelineEvents extends StatefulWidget {
       (i) => TimelineTrack.sample("Track $i"),
     );
     var end = TimelinePosition.fromPosition(30);
-    return TimelineEvents._(tracks, end, 40, key);
+    return TimelineEvents._(tracks, end, key);
   }
 
-  TimelineEvents._(this.tracks, this._trackEnd, this._trackHeight, Key? key)
-      : super(key: key);
+  TimelineEvents._(this.tracks, this.trackEnd, Key? key) : super(key: key);
 
   @override
-  TimelineEventsState createState() =>
-      TimelineEventsState(tracks, _trackEnd, _trackHeight);
+  TimelineEventsState createState() => TimelineEventsState();
 }
 
 class TimelineEventsState extends State<TimelineEvents>
     implements TimelineDataFactry {
-  late final List<TimelineTrack> tracks;
-  final Map<TimelineTrack, TimelineTrackState> trackStates = {};
+  static const height_min = 20.0;
+  static const height_max = 35.0;
+  static const unit_min = 30.0;
+  static const unit_max = 1000.0;
+  List<TimelineTrack> get tracks => widget.tracks;
+  Map<TimelineTrack, TimelineTrackState> get trackStates => widget.trackStates;
+  late TimelinePosition _trackEnd;
 
-  double _trackHeight;
-  TimelinePosition _trackEnd;
-  double _widthUnit = 50;
-  double _headerWidth = 100;
-  bool _sideOpen = false;
+  double _trackHeight = height_min + (height_max - height_min) * 0.5;
+  double _widthUnit = unit_min + (unit_max - unit_min) * 0.5;
+  double _headerWidth = 105;
+  double _zoom = 0.5;
+  double _scaleStartZoom = 0.5;
 
-  TimelineEventsState(this.tracks, this._trackEnd, this._trackHeight);
   double get trackHeight => _trackHeight;
-  TimelinePosition get trackEnd => _trackEnd;
-  double get widthUnit => _widthUnit;
+  double get unitWidth => _widthUnit;
   double get headerWidth => _headerWidth;
+  double get zoom => _zoom;
+  set zoom(double value) {
+    _zoom = value.clamp(0.0, 1.0);
+
+    setState(() {
+      _widthUnit = unit_min + (unit_max - unit_min) * _zoom;
+      _trackHeight = height_min + (height_max - height_min) * _zoom;
+    });
+    doAllTrack((state) {
+      state.setState(() {});
+      state.doAllElement((elementState) {
+        elementState.setState(() {});
+      });
+    });
+  }
 
   @override
   void initState() {
     super.initState();
+    _trackEnd = widget.trackEnd;
   }
 
+  TimelinePosition get trackEnd => _trackEnd;
   set trackEnd(TimelinePosition value) {
     setState(() {
-      _trackEnd = value;
+      this._trackEnd = value;
     });
+    doAllTrack((state) {
+      state.setState(() {});
+    });
+  }
+
+  Future<void> expanding(double min, int length) async {
+    await TimelineEventsExpanding.expandTrack(this.context, this, min, length);
   }
 
   void initTrack(TimelineTrackState trackState) {
@@ -88,78 +113,141 @@ class TimelineEventsState extends State<TimelineEvents>
 
   @override
   Widget build(BuildContext context) {
-    return MultiHeaderScrollView(
-      topHeaderHeight: 30,
+    var width = trackEnd.position * _widthUnit;
+
+    const underLine = const BoxDecoration(
+      border: Border(
+        bottom: BorderSide(width: 2, color: Colors.grey),
+      ),
+    );
+    var view = MultiHeaderScrollView(
+      topHeaderHeight: 40,
       leftHeaderWidth: _headerWidth,
-      topLeftHeader: () => Switch(
-          value: _sideOpen,
-          onChanged: (value) {
-            _sideOpen = value;
-            if (value) {
-              setState(() {
-                _trackHeight = 50;
-                _widthUnit = 200;
-                _headerWidth = 150;
-              });
-            } else {
-              setState(() {
-                _trackHeight = 20;
-                _widthUnit = 50;
-                _headerWidth = 50;
-              });
-            }
-          }),
-      topHeader: () => Container(
-        width: _trackEnd.position * _widthUnit,
-        decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(width: 1, color: Colors.grey),
-          ),
-        ),
-        child: TimelineScale(),
-      ),
-      leftHeader: () => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: tracks
-            .map(
-              (e) => Container(
-                  height: _trackHeight,
-                  decoration: BoxDecoration(
-                    border: Border(
-                      bottom: BorderSide(color: Colors.black26),
-                    ),
-                  ),
-                  child: e.header),
-            )
-            .toList(),
-      ),
-      child: () => Container(
-        width: _trackEnd.position * _widthUnit,
-        height: _trackHeight * tracks.length,
-        child: Stack(
+      topLeftHeader: DecoratedBox(
+        decoration: underLine,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            TimelineScale(
-              isBack: true,
+            InkWell(
+              customBorder: const CircleBorder(
+                side: BorderSide(
+                  width: 1,
+                  color: Colors.black,
+                ),
+              ),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(width: 1),
+                    color: _zoom == 0.0 ? Colors.grey : null),
+                child: const SizedBox(
+                  width: 25,
+                  height: 25,
+                  child: Icon(
+                    Icons.zoom_out,
+                    color: Colors.black,
+                    size: 20,
+                  ),
+                ),
+              ),
+              onTap: _zoom == 0.0
+                  ? null
+                  : () {
+                      zoom -= 0.05;
+                    },
             ),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: tracks
-                  .map(
-                    (e) => Container(
-                        width: _trackEnd.position * _widthUnit,
-                        height: _trackHeight,
-                        decoration: BoxDecoration(
-                          border: Border(
-                            bottom: BorderSide(color: Colors.black26),
-                          ),
-                        ),
-                        child: e),
-                  )
-                  .toList(),
+            InkWell(
+              customBorder: const CircleBorder(
+                side: BorderSide(
+                  width: 1,
+                  color: Colors.black,
+                ),
+              ),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(width: 1),
+                    color: _zoom == 1.0 ? Colors.grey : null),
+                child: const SizedBox(
+                  width: 25,
+                  height: 25,
+                  child: Icon(
+                    Icons.zoom_in,
+                    color: Colors.black,
+                    size: 20,
+                  ),
+                ),
+              ),
+              onTap: _zoom == 1.0
+                  ? null
+                  : () {
+                      zoom += 0.05;
+                    },
             ),
           ],
         ),
       ),
+      topHeader: SizedBox(
+        width: width,
+        child: DecoratedBox(
+          decoration: underLine,
+          child: TimelineScale(color: Colors.grey),
+        ),
+      ),
+      leftHeader: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: tracks
+            .map(
+              (e) => SizedBox(
+                height: _trackHeight,
+                width: headerWidth,
+                child: DecoratedBox(
+                  decoration: underLine,
+                  child: e.header,
+                ),
+              ),
+            )
+            .toList(),
+      ),
+      child: Stack(
+        children: [
+          SizedBox(
+            width: width,
+            height: _trackHeight * tracks.length,
+            child: TimelineScale(isBack: true, color: Colors.grey),
+          ),
+          SizedBox(
+            width: width,
+            height: _trackHeight * tracks.length,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: tracks
+                  .map(
+                    (e) => SizedBox(
+                      width: width,
+                      height: _trackHeight,
+                      child: DecoratedBox(
+                        decoration: underLine,
+                        child: e,
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    return GestureDetector(
+      child: view,
+      behavior: HitTestBehavior.translucent,
+      onScaleStart: (detail) {
+        _scaleStartZoom = zoom;
+      },
+      onScaleUpdate: (detail) {
+        zoom = _scaleStartZoom * detail.scale;
+      },
     );
   }
 
@@ -175,4 +263,125 @@ class TimelineEventsState extends State<TimelineEvents>
     }
     return data;
   }
+}
+
+class TimelineEventsExpanding {
+  static final Map<TimelineEventsState, TimelineEventsExpandingInfo> _states =
+      {};
+  static Future<void> expandTrack(
+    BuildContext context,
+    TimelineEventsState events,
+    double min,
+    int length,
+  ) async {
+    var info = _states[events];
+    if (info == null) {
+      info = TimelineEventsExpandingInfo(min, length, min, null);
+      _states[events] = info;
+      info.task = _show(context, events, info).then((_) {
+        events.trackEnd = TimelinePosition.fromPosition(info!.value);
+        _states.remove(events);
+      });
+      await info.task;
+    } else {
+      await Future.doWhile(() {
+        if (info!.setState != null) {
+          info.setState!.call(() {
+            if (min > info!.min) {
+              info.min = min;
+            }
+            info.length = length;
+            info.value = info.value.clamp(info.min, info.min + info.length);
+          });
+          return false;
+        }
+        return Future.delayed(Duration(milliseconds: 4), () => true);
+      });
+
+      await info.task;
+    }
+  }
+
+  static Future<void> _show(
+    BuildContext context,
+    TimelineEventsState events,
+    TimelineEventsExpandingInfo info,
+  ) async {
+    await showDialog(
+      barrierDismissible: false,
+      context: context,
+      builder: (_) {
+        return AlertDialog(
+          title: Text("Expands the area."),
+          content: Text("Expands the area, for the operation."),
+          actions: <Widget>[
+            StatefulBuilder(
+              builder: (BuildContext context, StateSetter setState) {
+                info.setState = setState;
+                return Column(
+                  children: [
+                    Align(
+                      alignment: Alignment.center,
+                      child: Text(
+                        info.value.toString(),
+                        style: Theme.of(context).textTheme.headline5,
+                      ),
+                    ),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Padding(
+                          padding: EdgeInsets.only(left: 30),
+                          child: Text(
+                            info.min.toInt().toString(),
+                            style: Theme.of(context).textTheme.subtitle1,
+                          ),
+                        ),
+                        SizedBox(
+                          width: 300,
+                          child: Slider(
+                            value: info.value,
+                            min: info.min,
+                            max: info.min + info.length,
+                            divisions: info.length,
+                            onChanged: (e) {
+                              setState(() {
+                                info.value = e;
+                              });
+                            },
+                          ),
+                        ),
+                        Padding(
+                          padding: EdgeInsets.only(right: 30),
+                          child: Text(
+                            (info.min + info.length).toInt().toString(),
+                            style: Theme.of(context).textTheme.subtitle1,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                );
+              },
+            ),
+            OutlinedButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: Text("OK"),
+            )
+          ],
+        );
+      },
+    );
+  }
+}
+
+class TimelineEventsExpandingInfo {
+  double min;
+  double value;
+  int length;
+  StateSetter? setState;
+  Future<void>? task;
+  TimelineEventsExpandingInfo(this.min, this.length, this.value, this.setState);
 }

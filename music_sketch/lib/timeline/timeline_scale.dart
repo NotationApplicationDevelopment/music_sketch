@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'timeline_events.dart';
 
@@ -5,7 +7,7 @@ class TimelineScale extends StatefulWidget {
   final int subSplit;
   final Color? color;
   final bool isBack;
-  TimelineScale({
+  const TimelineScale({
     this.isBack = false,
     this.subSplit = 4,
     this.color,
@@ -13,91 +15,61 @@ class TimelineScale extends StatefulWidget {
   }) : super(key: key);
 
   @override
-  _TimelineScaleState createState() =>
-      _TimelineScaleState(isBack, subSplit, color ?? Colors.black);
+  _TimelineScaleState createState() => _TimelineScaleState();
 }
 
 class _TimelineScaleState extends State<TimelineScale> {
+  int get _subSplit => widget.subSplit;
+  bool get _isBack => widget.isBack;
+  Color get _color => widget.color ?? Colors.black;
   TimelineEventsState? eventsState;
-  bool _isBack;
-  int _subSplit;
-  Color _color;
 
-  _TimelineScaleState(this._isBack, this._subSplit, this._color);
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    eventsState = context.findAncestorStateOfType<TimelineEventsState>();
+  }
 
   @override
   Widget build(BuildContext context) {
-    eventsState = context.findAncestorStateOfType<TimelineEventsState>();
-
-    var widthUnit = eventsState?.widthUnit ?? 100;
-
-    var cont = LayoutBuilder(
-      builder: (BuildContext context, BoxConstraints constraints) {
-        double height = constraints.maxHeight;
-        double width = constraints.maxWidth;
-        Color color = Color.fromARGB(
-          _isBack ? _color.alpha ~/ 4 : _color.alpha,
-          _color.red,
-          _color.green,
-          _color.blue,
-        );
-        var subLine = Container(width: 1, height: height, color: color);
-
-        Widget mainLine(int index) {
-          Widget mainLine;
-          if (_isBack) {
-            mainLine = Container(width: 3, height: height, color: color);
-          } else {
-            mainLine = Container(
-              height: height,
-              alignment: Alignment.topLeft,
-              decoration: BoxDecoration(
-                border: Border(
-                  left: BorderSide(width: 3, color: color),
+    var widthUnit = eventsState?.unitWidth ?? 100;
+    var cont = CustomPaint(
+      child: Row(
+        children: _isBack
+            ? []
+            : List<Widget>.generate(
+                eventsState?.trackEnd.position.floor() ?? 0,
+                (index) => SizedBox(
+                  width: widthUnit,
+                  child: RichText(
+                    text: TextSpan(
+                      text: " ${index + 1}",
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodyText2,
+                    ),
+                  ),
                 ),
               ),
-              child: Text(
-                " ${index + 1}",
-                style: TextStyle(color: _color),
-              ),
-            );
-          }
-          return mainLine;
-        }
-
-        return Stack(
-          children: List.generate(
-            (_subSplit * width / widthUnit).floor() + 1,
-            (index) {
-              Widget w = (index % _subSplit == 0)
-                  ? mainLine(index ~/ _subSplit)
-                  : subLine;
-              return Positioned(left: index * widthUnit / _subSplit, child: w);
-            },
-          ),
-        );
-      },
+      ),
+      painter: _ScalePainter(
+        widthUnit,
+        _subSplit,
+        _color,
+      ),
     );
-
-    if (_isBack) {
-      return cont;
-    }
 
     return GestureDetector(
       behavior: HitTestBehavior.translucent,
       child: cont,
       onDoubleTap: () {
-        eventsState = context.findAncestorStateOfType<TimelineEventsState>();
-        if (eventsState != null) {
-          eventsState!.doAllElement((state) {
-            state.setState(() {
-              state.isSelected = false;
-            });
+        eventsState?.doAllElement((state) {
+          state.setState(() {
+            state.isSelected = false;
           });
-        }
+        });
       },
       onLongPressStart: (detail) {
-        eventsState = context.findAncestorStateOfType<TimelineEventsState>();
         if (eventsState != null) {
           for (var track in eventsState!.trackStates.values) {
             track.onLongPressStart(detail);
@@ -119,5 +91,45 @@ class _TimelineScaleState extends State<TimelineScale> {
         }
       },
     );
+  }
+}
+
+class _ScalePainter extends CustomPainter {
+  final int subSplit;
+  final Color color;
+  final double unitWidth;
+  late final double _subWidth;
+
+  final textStyle = TextStyle(
+    color: Colors.black,
+    fontSize: 20,
+  );
+
+  _ScalePainter(this.unitWidth, this.subSplit, this.color) {
+    _subWidth = unitWidth / subSplit;
+  }
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final painter = Paint();
+    painter.color = color;
+    painter.isAntiAlias = false;
+    int count = 0;
+    painter.strokeWidth = 2 + 2 / 3;
+    for (double pos = 0.0; pos <= size.width; pos += _subWidth) {
+      canvas.drawLine(Offset(pos, 0), Offset(pos, size.height), painter);
+      if (count < subSplit - 1) {
+        count++;
+        painter.strokeWidth = 2 / 3;
+      } else {
+        count = 0;
+        painter.strokeWidth = 2 + 2 / 3;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _ScalePainter oldDelegate) {
+    return oldDelegate.unitWidth != unitWidth;
   }
 }

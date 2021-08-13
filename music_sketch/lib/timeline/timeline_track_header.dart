@@ -9,43 +9,53 @@ class TimelineTrackHeader extends StatefulWidget {
       : super(key: key);
 
   @override
-  _TimelineTrackHeaderState createState() =>
-      _TimelineTrackHeaderState(icon, text, additional);
+  _TimelineTrackHeaderState createState() => _TimelineTrackHeaderState();
 }
 
 class _TimelineTrackHeaderState extends State<TimelineTrackHeader> {
-  Widget? icon;
-  Text? text;
-  Widget? additional;
-
-  _TimelineTrackHeaderState(this.icon, this.text, this.additional);
+  Widget? get icon => widget.icon;
+  Text? get text => widget.text;
+  Widget? get additional => widget.additional;
+  _TimelineTrackHeaderState();
 
   @override
   Widget build(BuildContext context) {
-    var cont = Container(
-      decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(5),
-          border: Border.all(color: Colors.black, width: 1),
-          color: Colors.grey.shade200),
-      height: 10,
-      child: SingleChildScrollView(
-        scrollDirection: Axis.vertical,
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Container(
-            alignment: Alignment.centerLeft,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [icon ?? Container(), text ?? Container()],
+    var cont = Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        if (icon != null) FittedBox(child: icon),
+        if (text != null) FittedBox(child: text),
+        if (additional != null)
+          Expanded(
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: Padding(
+                padding: const EdgeInsets.only(left: 2, top:2, bottom: 4, right: 2),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(width: 1),
+                  ),
+                  child: PopupMenuButton(
+                    child: const FittedBox(
+                      child: const Icon(
+                        Icons.more_horiz,
+                      ),
+                    ),
+                    itemBuilder: (context) {
+                      return [
+                        PopupMenuItem(
+                          child: additional,
+                          value: null,
+                        ),
+                      ];
+                    },
+                  ),
                 ),
-                additional ?? Container()
-              ],
+              ),
             ),
           ),
-        ),
-      ),
+      ],
     );
 
     return FractionallySizedBox(
