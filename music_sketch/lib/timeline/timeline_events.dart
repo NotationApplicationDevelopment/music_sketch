@@ -39,6 +39,7 @@ class TimelineEventsState extends State<TimelineEvents>
   double _trackHeight = height_min + (height_max - height_min) * 0.5;
   double _widthUnit = unit_min + (unit_max - unit_min) * 0.5;
   double _headerWidth = 105;
+  double _headerHeight = 40;
   double _zoom = 0.5;
   double _scaleStartZoom = 0.5;
 
@@ -116,12 +117,18 @@ class TimelineEventsState extends State<TimelineEvents>
     var width = trackEnd.position * _widthUnit;
 
     const underLine = const BoxDecoration(
-      border: Border(
-        bottom: BorderSide(width: 2, color: Colors.grey),
+      border: Border.fromBorderSide(
+        BorderSide(
+          width: 1,
+          color: Colors.grey,
+        ),
       ),
     );
+    var size = MediaQuery.of(context).size;
+    var whiteSpaceH = size.width * 0.5;
+    var whiteSpaceV = size.height * 0.5;
     var view = MultiHeaderScrollView(
-      topHeaderHeight: 40,
+      topHeaderHeight: _headerHeight,
       leftHeaderWidth: _headerWidth,
       topLeftHeader: DecoratedBox(
         decoration: underLine,
@@ -188,54 +195,63 @@ class TimelineEventsState extends State<TimelineEvents>
         ),
       ),
       topHeader: SizedBox(
-        width: width,
+        width: width + whiteSpaceH,
+        height: _headerHeight,
         child: DecoratedBox(
           decoration: underLine,
           child: TimelineScale(color: Colors.grey),
         ),
       ),
-      leftHeader: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: tracks
-            .map(
-              (e) => SizedBox(
-                height: _trackHeight,
-                width: headerWidth,
-                child: DecoratedBox(
-                  decoration: underLine,
-                  child: e.header,
+      leftHeader: SizedBox(
+        height: _trackHeight * tracks.length + whiteSpaceV,
+        width: headerWidth,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: tracks
+              .map(
+                (e) => SizedBox(
+                  height: _trackHeight,
+                  width: headerWidth,
+                  child: DecoratedBox(
+                    decoration: underLine,
+                    child: e.header,
+                  ),
                 ),
-              ),
-            )
-            .toList(),
+              )
+              .toList(),
+        ),
       ),
-      child: Stack(
-        children: [
-          SizedBox(
-            width: width,
-            height: _trackHeight * tracks.length,
-            child: TimelineScale(isBack: true, color: Colors.grey),
-          ),
-          SizedBox(
-            width: width,
-            height: _trackHeight * tracks.length,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: tracks
-                  .map(
-                    (e) => SizedBox(
-                      width: width,
-                      height: _trackHeight,
-                      child: DecoratedBox(
-                        decoration: underLine,
-                        child: e,
-                      ),
-                    ),
-                  )
-                  .toList(),
+      child: SizedBox(
+        width: width + whiteSpaceH,
+        height: _trackHeight * tracks.length + whiteSpaceV,
+        child: Stack(
+          children: [
+            SizedBox(
+              width: width,
+              height: _trackHeight * tracks.length,
+              child: TimelineScale(isBack: true, color: Colors.grey),
             ),
-          ),
-        ],
+            SizedBox(
+              width: width + whiteSpaceH,
+              height: _trackHeight * tracks.length + whiteSpaceV,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: tracks
+                    .map(
+                      (e) => SizedBox(
+                        width: width,
+                        height: _trackHeight,
+                        child: DecoratedBox(
+                          decoration: underLine,
+                          child: e,
+                        ),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ),
+          ],
+        ),
       ),
     );
 
@@ -318,49 +334,46 @@ class TimelineEventsExpanding {
             StatefulBuilder(
               builder: (BuildContext context, StateSetter setState) {
                 info.setState = setState;
-                return Column(
-                  children: [
-                    Align(
-                      alignment: Alignment.center,
-                      child: Text(
-                        info.value.toString(),
-                        style: Theme.of(context).textTheme.headline5,
-                      ),
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Padding(
-                          padding: EdgeInsets.only(left: 30),
-                          child: Text(
+                return Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 0),
+                  child: Column(
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
                             info.min.toInt().toString(),
                             style: Theme.of(context).textTheme.subtitle1,
                           ),
-                        ),
-                        SizedBox(
-                          width: 300,
-                          child: Slider(
-                            value: info.value,
-                            min: info.min,
-                            max: info.min + info.length,
-                            divisions: info.length,
-                            onChanged: (e) {
-                              setState(() {
-                                info.value = e;
-                              });
-                            },
+                          Text(
+                            info.value.toString(),
+                            style: Theme.of(context).textTheme.headline5,
                           ),
-                        ),
-                        Padding(
-                          padding: EdgeInsets.only(right: 30),
-                          child: Text(
+                          Text(
                             (info.min + info.length).toInt().toString(),
                             style: Theme.of(context).textTheme.subtitle1,
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
+                        ],
+                      ),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Slider(
+                              value: info.value,
+                              min: info.min,
+                              max: info.min + info.length,
+                              divisions: info.length,
+                              onChanged: (e) {
+                                setState(() {
+                                  info.value = e;
+                                });
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 );
               },
             ),

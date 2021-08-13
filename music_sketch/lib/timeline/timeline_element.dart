@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 import 'package:music_sketch/timeline/timeline_track.dart';
 import 'timeline_data.dart';
@@ -88,7 +87,7 @@ class TimelineElementState extends State<TimelineElement> {
     positionRange = positionRange.seted(start: start, end: end);
   }
 
-  void _positionRangeCheck() {
+  void positionRangeCheck() {
     var start = positionRange.start;
     var end = positionRange.end;
     if (start >= positionRange.end) {
@@ -135,6 +134,9 @@ class TimelineElementState extends State<TimelineElement> {
     super.didChangeDependencies();
     _trackState = context.findAncestorStateOfType<TimelineTrackState>();
     _trackState?.initElement(this);
+    Future(() {
+      positionRangeCheck();
+    });
   }
 
   @override
@@ -250,7 +252,7 @@ class TimelineElementState extends State<TimelineElement> {
               if (e.isSelected) {
                 e.setState(() {
                   e.shift(dist);
-                  e._positionRangeCheck();
+                  e.positionRangeCheck();
                 });
               }
             });
@@ -260,7 +262,7 @@ class TimelineElementState extends State<TimelineElement> {
               if (e.isSelected) {
                 e.setState(() {
                   e.move(start: dist);
-                  e._positionRangeCheck();
+                  e.positionRangeCheck();
                 });
               }
             });
@@ -270,7 +272,7 @@ class TimelineElementState extends State<TimelineElement> {
               if (e.isSelected) {
                 e.setState(() {
                   e.move(end: dist);
-                  e._positionRangeCheck();
+                  e.positionRangeCheck();
                 });
               }
             });

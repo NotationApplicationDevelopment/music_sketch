@@ -30,7 +30,7 @@ class _TimelineTrackHeaderState extends State<TimelineTrackHeader> {
             child: Align(
               alignment: Alignment.centerRight,
               child: Padding(
-                padding: const EdgeInsets.only(left: 2, top:2, bottom: 4, right: 2),
+                padding: const EdgeInsets.only(left: 2, top:2, bottom: 2, right: 2),
                 child: DecoratedBox(
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
