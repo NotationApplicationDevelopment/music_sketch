@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:music_sketch/timeline/multi_header_scroll_view.dart';
+import 'package:linked_scroll_controller/linked_scroll_controller.dart';
 import 'package:music_sketch/timeline/timeline_element.dart';
-import 'package:music_sketch/timeline/timeline_scale.dart';
+import 'package:music_sketch/timeline/scale.dart';
 import 'package:music_sketch/timeline/timeline_times.dart';
+import 'multi_header_list_view.dart';
 import 'timeline_data.dart';
 import 'timeline_track.dart';
 
@@ -43,16 +44,26 @@ class TimelineEventsState extends State<TimelineEvents>
   double _zoom = 0.5;
   double _scaleStartZoom = 0.5;
 
+  double zoomCenterX = 0;
+  double zoomCentrY = 0;
+  Offset _scrollOffset = Offset.zero;
+  late LinkedScrollControllerGroup scrollH;
+  late LinkedScrollControllerGroup scrollV;
+
   double get trackHeight => _trackHeight;
   double get unitWidth => _widthUnit;
   double get headerWidth => _headerWidth;
   double get zoom => _zoom;
   set zoom(double value) {
     _zoom = value.clamp(0.0, 1.0);
-
+    print(zoomCenterX);
     setState(() {
       _widthUnit = unit_min + (unit_max - unit_min) * _zoom;
       _trackHeight = height_min + (height_max - height_min) * _zoom;
+      _scrollOffset = Offset(
+        zoomCenterX * unitWidth,
+        zoomCentrY * _trackHeight,
+      );
     });
     doAllTrack((state) {
       state.setState(() {});
@@ -66,6 +77,8 @@ class TimelineEventsState extends State<TimelineEvents>
   void initState() {
     super.initState();
     _trackEnd = widget.trackEnd;
+    scrollV = LinkedScrollControllerGroup();
+    scrollH = LinkedScrollControllerGroup();
   }
 
   TimelinePosition get trackEnd => _trackEnd;
@@ -127,142 +140,191 @@ class TimelineEventsState extends State<TimelineEvents>
     var size = MediaQuery.of(context).size;
     var whiteSpaceH = size.width * 0.5;
     var whiteSpaceV = size.height * 0.5;
-    var view = MultiHeaderScrollView(
-      topHeaderHeight: _headerHeight,
-      leftHeaderWidth: _headerWidth,
-      topLeftHeader: DecoratedBox(
-        decoration: underLine,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            InkWell(
-              customBorder: const CircleBorder(
-                side: BorderSide(
-                  width: 1,
-                  color: Colors.black,
-                ),
-              ),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(width: 1),
-                    color: _zoom == 0.0 ? Colors.grey : null),
-                child: const SizedBox(
-                  width: 25,
-                  height: 25,
-                  child: Icon(
-                    Icons.zoom_out,
-                    color: Colors.black,
-                    size: 20,
-                  ),
-                ),
-              ),
-              onTap: _zoom == 0.0
-                  ? null
-                  : () {
-                      zoom -= 0.05;
-                    },
-            ),
-            InkWell(
-              customBorder: const CircleBorder(
-                side: BorderSide(
-                  width: 1,
-                  color: Colors.black,
-                ),
-              ),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(width: 1),
-                    color: _zoom == 1.0 ? Colors.grey : null),
-                child: const SizedBox(
-                  width: 25,
-                  height: 25,
-                  child: Icon(
-                    Icons.zoom_in,
-                    color: Colors.black,
-                    size: 20,
-                  ),
-                ),
-              ),
-              onTap: _zoom == 1.0
-                  ? null
-                  : () {
-                      zoom += 0.05;
-                    },
-            ),
-          ],
-        ),
-      ),
-      topHeader: SizedBox(
-        width: width + whiteSpaceH,
-        height: _headerHeight,
-        child: DecoratedBox(
+
+    var view = MultiHeaderListView(
+        scrollOffset: _scrollOffset,
+        scrollH: scrollH,
+        scrollV: scrollV,
+        scrollHeight: _trackHeight * tracks.length + whiteSpaceV,
+        scrollWidth: width + whiteSpaceH,
+        topHeaderHeight: _headerHeight,
+        leftHeaderWidth: _headerWidth,
+        topLeftHeader: DecoratedBox(
           decoration: underLine,
-          child: TimelineScale(color: Colors.grey),
-        ),
-      ),
-      leftHeader: SizedBox(
-        height: _trackHeight * tracks.length + whiteSpaceV,
-        width: headerWidth,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: tracks
-              .map(
-                (e) => SizedBox(
-                  height: _trackHeight,
-                  width: headerWidth,
-                  child: DecoratedBox(
-                    decoration: underLine,
-                    child: e.header,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              InkWell(
+                customBorder: const CircleBorder(
+                  side: BorderSide(
+                    width: 1,
+                    color: Colors.black,
                   ),
                 ),
-              )
-              .toList(),
-        ),
-      ),
-      child: SizedBox(
-        width: width + whiteSpaceH,
-        height: _trackHeight * tracks.length + whiteSpaceV,
-        child: Stack(
-          children: [
-            SizedBox(
-              width: width,
-              height: _trackHeight * tracks.length,
-              child: TimelineScale(isBack: true, color: Colors.grey),
-            ),
-            SizedBox(
-              width: width + whiteSpaceH,
-              height: _trackHeight * tracks.length + whiteSpaceV,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: tracks
-                    .map(
-                      (e) => SizedBox(
-                        width: width,
-                        height: _trackHeight,
-                        child: DecoratedBox(
-                          decoration: underLine,
-                          child: e,
-                        ),
-                      ),
-                    )
-                    .toList(),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(width: 1),
+                      color: _zoom == 0.0 ? Colors.grey : null),
+                  child: const SizedBox(
+                    width: 25,
+                    height: 25,
+                    child: Icon(
+                      Icons.zoom_out,
+                      color: Colors.black,
+                      size: 20,
+                    ),
+                  ),
+                ),
+                onTap: _zoom == 0.0
+                    ? null
+                    : () {
+                        zoomCenterX = scrollH.offset / unitWidth;
+                        zoomCentrY = scrollV.offset / _trackHeight;
+                        zoom -= 0.05;
+                      },
               ),
-            ),
-          ],
+              InkWell(
+                customBorder: const CircleBorder(
+                  side: BorderSide(
+                    width: 1,
+                    color: Colors.black,
+                  ),
+                ),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(width: 1),
+                      color: _zoom == 1.0 ? Colors.grey : null),
+                  child: const SizedBox(
+                    width: 25,
+                    height: 25,
+                    child: Icon(
+                      Icons.zoom_in,
+                      color: Colors.black,
+                      size: 20,
+                    ),
+                  ),
+                ),
+                onTap: _zoom == 1.0
+                    ? null
+                    : () {
+                        zoomCenterX = scrollH.offset / unitWidth;
+                        zoomCentrY = scrollV.offset / _trackHeight;
+                        zoom += 0.05;
+                      },
+              ),
+            ],
+          ),
         ),
-      ),
-    );
+        topHeaders: Scale(
+          height: _headerHeight,
+          widthAsUnit: trackEnd.position + (whiteSpaceH / unitWidth),
+          unitWidth: unitWidth,
+          subSplit: 8,
+          color: Colors.grey,
+          text: (i, p) => i < trackEnd.position ? " ${(i + 1)} " : "",
+        ).split().asMap().entries.map((e) {
+          return GestureDetector(
+            child: e.value,
+            onDoubleTap: () {
+              doAllElement((state) {
+                state.setState(() {
+                  state.isSelected = false;
+                });
+              });
+            },
+            onLongPressStart: (detail) {
+              var localPos = Offset(
+                detail.localPosition.dx + unitWidth * e.key,
+                detail.localPosition.dy,
+              );
+              doAllTrack((state) {
+                state.onLongPressStart(localPos);
+              });
+            },
+            onLongPressMoveUpdate: (detail) {
+              var localPos = Offset(
+                detail.localPosition.dx + unitWidth * e.key,
+                detail.localPosition.dy,
+              );
+              doAllTrack((state) {
+                state.onLongPressMoveUpdate(localPos);
+              });
+            },
+            onLongPressEnd: (detail) {
+              var localPos = Offset(
+                detail.localPosition.dx + unitWidth * e.key,
+                detail.localPosition.dy,
+              );
+              doAllTrack((state) {
+                state.onLongPressEnd(localPos);
+              });
+            },
+          );
+        }).toList(),
+        leftHeaders: tracks
+                .map(
+                  (e) => SizedBox(
+                    height: _trackHeight,
+                    width: headerWidth,
+                    child: DecoratedBox(
+                      decoration: underLine,
+                      child: e.header,
+                    ),
+                  ),
+                )
+                .toList() +
+            [
+              SizedBox(
+                height: whiteSpaceV,
+                width: headerWidth,
+              )
+            ],
+        mainChildren: {
+          Scale(
+                height: _trackHeight * tracks.length,
+                widthAsUnit: trackEnd.position + 0.1,
+                unitWidth: unitWidth,
+                subSplit: 4,
+                color: Colors.grey,
+              ).split() +
+              [
+                SizedBox(
+                  width: whiteSpaceH,
+                  height: _trackHeight * tracks.length,
+                )
+              ]: Axis.horizontal,
+          tracks
+                  .map(
+                    (e) => SizedBox(
+                      width: width,
+                      height: _trackHeight,
+                      child: DecoratedBox(
+                        decoration: underLine,
+                        child: e,
+                      ),
+                    ),
+                  )
+                  .toList() +
+              [
+                SizedBox(
+                  width: width,
+                  height: whiteSpaceV,
+                )
+              ]: Axis.vertical,
+        });
 
     return GestureDetector(
       child: view,
       behavior: HitTestBehavior.translucent,
       onScaleStart: (detail) {
-        _scaleStartZoom = zoom;
+        zoomCenterX = scrollH.offset / unitWidth;
+        zoomCentrY = scrollV.offset / _trackHeight;
+        _scaleStartZoom = zoom + 0.1;
       },
       onScaleUpdate: (detail) {
-        zoom = _scaleStartZoom * detail.scale;
+        zoom = (_scaleStartZoom) * detail.scale - 0.1;
       },
     );
   }

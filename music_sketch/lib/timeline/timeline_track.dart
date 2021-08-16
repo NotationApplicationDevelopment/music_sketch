@@ -145,16 +145,16 @@ class TimelineTrackState extends State<TimelineTrack> {
     }
   }
 
-  void onLongPressStart(LongPressStartDetails detail) {
-    var pos = detail.localPosition.dx / unitWidth;
+  void onLongPressStart(Offset localPosition) {
+    var pos = localPosition.dx / unitWidth;
     var timePos = TimelinePosition.fromPosition(pos);
     if (_selectAreaValue == null) {
       _selectAreaValue = TimelinePositionRange(timePos, timePos);
     }
   }
 
-  void onLongPressMoveUpdate(LongPressMoveUpdateDetails detail) {
-    var pos = detail.localPosition.dx / unitWidth;
+  void onLongPressMoveUpdate(Offset localPosition) {
+    var pos = localPosition.dx / unitWidth;
     var timePos = TimelinePosition.fromPosition(pos);
     if (_selectAreaValue != null) {
       setState(() {
@@ -164,8 +164,8 @@ class TimelineTrackState extends State<TimelineTrack> {
     }
   }
 
-  void onLongPressEnd(LongPressEndDetails detail) {
-    var pos = detail.localPosition.dx / unitWidth;
+  void onLongPressEnd(Offset localPosition) {
+    var pos = localPosition.dx / unitWidth;
     var timePos = TimelinePosition.fromPosition(pos);
     if (_selectAreaValue != null) {
       var area = TimelinePositionRange(_selectAreaValue!.start, timePos);
@@ -266,9 +266,9 @@ class TimelineTrackState extends State<TimelineTrack> {
           add(element);
         }
       },
-      onLongPressStart: onLongPressStart,
-      onLongPressMoveUpdate: onLongPressMoveUpdate,
-      onLongPressEnd: onLongPressEnd,
+      onLongPressStart: (d) => onLongPressStart(d.localPosition),
+      onLongPressMoveUpdate: (d) => onLongPressMoveUpdate(d.localPosition),
+      onLongPressEnd: (d) => onLongPressEnd(d.localPosition),
     );
 
     return Stack(

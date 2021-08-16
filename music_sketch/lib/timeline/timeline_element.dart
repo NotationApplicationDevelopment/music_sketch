@@ -23,7 +23,7 @@ class TimelineElement extends StatefulWidget {
   }
 }
 
-class TimelineElementState extends State<TimelineElement> {
+class TimelineElementState extends State<TimelineElement> with AutomaticKeepAliveClientMixin{
   TimelineTrackState? _trackState;
   TimelinePosition _trackEnd = TimelinePosition.fromPosition(100);
   int _dragMode = -1;
@@ -139,8 +139,14 @@ class TimelineElementState extends State<TimelineElement> {
     });
   }
 
+
+  @override
+  bool get wantKeepAlive => true;
+
   @override
   Widget build(BuildContext context) {
+    super.build(context);
+
     var unitWidth = this.unitWidth;
     var trackEnd = unitWidth * this.trackEnd.position;
     var space =
