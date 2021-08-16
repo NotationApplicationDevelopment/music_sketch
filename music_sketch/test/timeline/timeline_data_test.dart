@@ -24,7 +24,7 @@ class _TestFuctry extends TimelineDataFactry {
 
 void main() {
   var fact = _TestFuctry();
-  var timelineData = TimelineData<String>(fact);
+  var timelineData = TimelineData(fact);
   var data1 = TimelineElementData(
       TimelinePositionRange(TimelinePosition(0, 0), TimelinePosition(0, 0)),
       "test1");

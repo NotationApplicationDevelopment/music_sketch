@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:music_sketch/timeline/timeline_data.dart';
-import 'package:music_sketch/timeline/timeline_element.dart';
+import 'package:music_sketch/timeline/timeline_element_old.dart';
 import 'package:music_sketch/timeline/timeline_times.dart';
 
 void main() {

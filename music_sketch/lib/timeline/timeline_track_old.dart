@@ -1,10 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:music_sketch/timeline/timeline_data.dart';
-import 'package:music_sketch/timeline/timeline_events.dart';
-import 'timeline_element.dart';
+import 'package:music_sketch/timeline/timeline_events_old.dart';
+import 'timeline_element_old.dart';
 import 'timeline_times.dart';
-import 'timeline_track_header.dart';
+import 'timeline_track_header_old.dart';
 
 class TimelineTrack extends StatefulWidget {
   final String trackName;

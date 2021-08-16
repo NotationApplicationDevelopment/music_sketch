@@ -11,7 +11,7 @@ class TimelineElementData {
   TimelineElementData(this.positionRange, this.info);
 }
 
-class TimelineData<T> {
+class TimelineData {
   late final Map<String, List<TimelineElementData>> dataList;
   final TimelineDataFactry factry;
 
