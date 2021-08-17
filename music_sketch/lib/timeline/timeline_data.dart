@@ -9,18 +9,14 @@ class TimelineElementData {
   dynamic info;
 
   TimelineElementData(this.positionRange, this.info);
-}
 
-class TimelineData {
-  late final Map<String, List<TimelineElementData>> dataList;
-  final TimelineDataFactry factry;
-
-  TimelineData(this.factry, {Map<String, List<TimelineElementData>>? dataList}) {
-    this.dataList = dataList ?? {};
+  bool operator ==(dynamic other) {
+    return (other is TimelineElementData) &&
+        (this.positionRange == other.positionRange) &&
+        (this.info == other.info);
   }
 
-  void update() {
-    dataList.clear();
-    dataList.addAll(factry.getDatas());
-  }
+  @override
+  int get hashCode => positionRange.hashCode ^ info.hashCode;
+
 }

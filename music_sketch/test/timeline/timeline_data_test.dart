@@ -24,7 +24,6 @@ class _TestFuctry extends TimelineDataFactry {
 
 void main() {
   var fact = _TestFuctry();
-  var timelineData = TimelineData(fact);
   var data1 = TimelineElementData(
       TimelinePositionRange(TimelinePosition(0, 0), TimelinePosition(0, 0)),
       "test1");
@@ -34,19 +33,16 @@ void main() {
 
   test('timeline_data_test_add', () {
     fact.add(data1);
-    timelineData.update();
-    expect(timelineData.dataList["0"]?[0].info, "test1");
+    expect(fact.getDatas()["0"]?[0].info, "test1");
   });
 
   test('timeline_data_test_set', () {
     fact.set(0, data2);
-    timelineData.update();
-    expect(timelineData.dataList["0"]?[0].info, "test2");
+    expect(fact.getDatas()["0"]?[0].info, "test2");
   });
 
   test('timeline_data_test_reset', () {
     fact.reset();
-    timelineData.update();
-    expect(timelineData.dataList["0"]?.length, 0);
+    expect(fact.getDatas()["0"]?.length, 0);
   });
 }
