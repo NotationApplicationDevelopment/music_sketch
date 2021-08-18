@@ -19,13 +19,13 @@ class Scale extends StatelessWidget {
   }) : super(key: key);
 
   List<Widget> split() {
-    int length = widthAsUnit.ceil();
-    double lastWidth = (widthAsUnit - widthAsUnit.floor()) * unitWidth;
+    int length = widthAsUnit.floor();
+    double lastWidth = (widthAsUnit - length) * unitWidth;
 
     return List.generate(
-      length,
+      length + 1,
       (index) {
-        bool isLast = index + 1 == length;
+        bool isLast = index == length;
         return _SplitedScale(
           height,
           index,
