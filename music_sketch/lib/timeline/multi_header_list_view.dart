@@ -2,6 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:linked_scroll_controller/linked_scroll_controller.dart';
 
+enum MultiHeaderListViewPosition {
+  top,
+  left,
+  topLeft,
+  view,
+}
+
 class MultiHeaderListViewTrack {
   final Axis direction;
   final int count;
@@ -23,8 +30,7 @@ class MultiHeaderListViewTrack {
 class MultiHeaderListView extends StatefulWidget {
   final double leftHeaderWidth;
   final double topHeaderHeight;
-  final double contentsWidth;
-  final double contentsHeight;
+  final Size contentsSize;
   final EdgeInsets scrollMargin;
   final Widget? topLeftHeader;
   final Iterable<MultiHeaderListViewTrack> headers;
@@ -33,8 +39,7 @@ class MultiHeaderListView extends StatefulWidget {
   MultiHeaderListView({
     required this.leftHeaderWidth,
     required this.topHeaderHeight,
-    required this.contentsWidth,
-    required this.contentsHeight,
+    required this.contentsSize,
     required this.scrollMargin,
     required this.topLeftHeader,
     required this.headers,
@@ -48,8 +53,7 @@ class MultiHeaderListView extends StatefulWidget {
 class _MultiHeaderListViewState extends State<MultiHeaderListView> {
   double get leftHeaderWidth => widget.leftHeaderWidth;
   double get topHeaderHeight => widget.topHeaderHeight;
-  double get contentsWidth => widget.contentsWidth;
-  double get contentsHeight => widget.contentsHeight;
+  Size get contentsSize => widget.contentsSize;
   EdgeInsets get scrollMargin => widget.scrollMargin;
   Widget? get topLeftHeader => widget.topLeftHeader;
   Iterable<MultiHeaderListViewTrack> get headers => widget.headers;
@@ -57,11 +61,12 @@ class _MultiHeaderListViewState extends State<MultiHeaderListView> {
 
   late final LinkedScrollControllerGroup _scrollHorizontal;
   late final LinkedScrollControllerGroup _scrollVertical;
-  double _viewWidth = 0;
-  double _viewHeight = 0;
+  late final ScrollController viewScrollH;
+  late final ScrollController viewScrollV;
+
+  Size _viewSize = Size.zero;
   bool _isInit = true;
-  double _beforeContentsWidth = 1;
-  double _beforeContentsHeight = 1;
+  Size _beforeContentsSize = Size(1, 1);
   List<MultiHeaderListViewTrack> topHeaders = [];
   List<MultiHeaderListViewTrack> leftHeaders = [];
 
@@ -69,29 +74,48 @@ class _MultiHeaderListViewState extends State<MultiHeaderListView> {
   void initState() {
     super.initState();
     _scrollHorizontal = _initScrollGroup(
-        () => _viewWidth, contentsWidth, scrollMargin.horizontal);
+      () => _viewSize.width,
+      () => contentsSize.width,
+      () => scrollMargin.horizontal,
+    );
     _scrollVertical = _initScrollGroup(
-        () => _viewHeight, contentsHeight, scrollMargin.vertical);
+      () => _viewSize.height,
+      () => contentsSize.height,
+      () => scrollMargin.vertical,
+    );
+
+    viewScrollH = _scrollHorizontal.addAndGet();
+    viewScrollV = _scrollVertical.addAndGet();
+  }
+
+  @override
+  void dispose() {
+    viewScrollH.dispose();
+    viewScrollV.dispose();
+    super.dispose();
   }
 
   static LinkedScrollControllerGroup _initScrollGroup(
     double Function() viewSize,
-    double contentsSize,
-    double scrollMargin,
+    double Function() contentsSize,
+    double Function() scrollMargin,
   ) {
     var group = LinkedScrollControllerGroup();
     return group
-      ..addOffsetChangedListener(() {
-        double max = (viewSize() >= contentsSize)
-            ? 0
-            : contentsSize - viewSize() + scrollMargin;
-
-        if (group.offset > max) {
-          Future.microtask(() {
-            group.jumpTo(max);
-          });
-        }
-      });
+      ..addOffsetChangedListener(
+        () {
+          double contents = contentsSize();
+          double max = (viewSize() >= contents)
+              ? 0
+              : contents - viewSize() + scrollMargin();
+          print("${group.offset} / $max");
+          if (group.offset > max) {
+            Future.microtask(() {
+              group.jumpTo(max);
+            });
+          }
+        },
+      );
   }
 
   @override
@@ -99,15 +123,16 @@ class _MultiHeaderListViewState extends State<MultiHeaderListView> {
     if (_isInit) {
       _isInit = false;
     } else {
-      var posH =
-          _scrollHorizontal.offset * contentsWidth / _beforeContentsWidth;
-      var posV =
-          _scrollVertical.offset * contentsHeight / _beforeContentsHeight;
+      var posH = _scrollHorizontal.offset *
+          contentsSize.width /
+          _beforeContentsSize.width;
+      var posV = _scrollVertical.offset *
+          contentsSize.height /
+          _beforeContentsSize.height;
       _scrollHorizontal.jumpTo(posH);
       _scrollVertical.jumpTo(posV);
     }
-    _beforeContentsWidth = contentsWidth;
-    _beforeContentsHeight = contentsHeight;
+    _beforeContentsSize = contentsSize;
 
     topHeaders = [];
     leftHeaders = [];
@@ -118,53 +143,69 @@ class _MultiHeaderListViewState extends State<MultiHeaderListView> {
         leftHeaders.add(item);
       }
     }
-    return _Model(
+    return MultiHeaderListViewInfo(
       state: this,
       child: LayoutBuilder(
         builder: (context, constraints) {
-          var maxWidth = constraints.maxWidth;
-          var maxHeight = constraints.minHeight;
-          _viewWidth = maxWidth - leftHeaderWidth;
-          _viewHeight = maxHeight - topHeaderHeight;
+          var maxSize = Size(
+            constraints.maxWidth,
+            constraints.minHeight,
+          );
+          _viewSize = Size(
+            maxSize.width - leftHeaderWidth,
+            maxSize.height - topHeaderHeight,
+          );
 
           var topLeft = const _ViewOfPosition(
-            position: MultiHeaderViewPosition.topLeft,
+            position: MultiHeaderListViewPosition.topLeft,
           );
 
           var left = const _ViewOfPosition(
-            position: MultiHeaderViewPosition.left,
+            position: MultiHeaderListViewPosition.left,
           );
 
           var top = const _ViewOfPosition(
-            position: MultiHeaderViewPosition.top,
+            position: MultiHeaderListViewPosition.top,
           );
 
           var view = const _ViewOfPosition(
-            position: MultiHeaderViewPosition.view,
+            position: MultiHeaderListViewPosition.view,
           );
 
           return ScrollConfiguration(
             behavior:
                 ScrollConfiguration.of(context).copyWith(scrollbars: false),
             child: Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 SizedBox(
                   width: leftHeaderWidth,
-                  height: maxHeight,
+                  height: _viewSize.height,
                   child: Column(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      topLeft,
-                      left,
+                      SizedBox(
+                        width: leftHeaderWidth,
+                        height: topHeaderHeight,
+                        child: topLeft,
+                      ),
+                      Expanded(child: left),
                     ],
                   ),
                 ),
-                SizedBox(
-                  width: _viewWidth,
-                  height: maxHeight,
+                Expanded(
                   child: Column(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      top,
-                      view,
+                      SizedBox(
+                        width: _viewSize.width,
+                        height: topHeaderHeight,
+                        child: top,
+                      ),
+                      Expanded(child: view),
                     ],
                   ),
                 ),
@@ -178,7 +219,7 @@ class _MultiHeaderListViewState extends State<MultiHeaderListView> {
 }
 
 class _ViewOfPosition extends StatelessWidget {
-  final MultiHeaderViewPosition position;
+  final MultiHeaderListViewPosition position;
 
   const _ViewOfPosition({
     Key? key,
@@ -187,53 +228,145 @@ class _ViewOfPosition extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final Iterable<MultiHeaderListViewTrack> builders;
-    final double height;
-    final double width;
-
-    var model = _Model.of(
+    var model = MultiHeaderListViewInfo.of(
       context,
       position,
     );
 
     if (model == null) {
-      height = 0;
-      width = 0;
-      builders = [];
-    } else {
-      switch (position) {
-        case MultiHeaderViewPosition.top:
-          height = model.topHeaderHeight;
-          width = model._state._viewWidth;
-          builders = model._state.topHeaders;
-          break;
-        case MultiHeaderViewPosition.left:
-          height = model._state._viewHeight;
-          width = model.leftHeaderWidth;
-          builders = model._state.leftHeaders;
-          break;
-        case MultiHeaderViewPosition.view:
-          height = model._state._viewHeight;
-          width = model._state._viewWidth;
-          builders = model._state.mainChildren;
-          break;
-        case MultiHeaderViewPosition.topLeft:
-          return SizedBox(
-            width: model.leftHeaderWidth,
-            height: model.topHeaderHeight,
-            child: model._state.topLeftHeader,
-          );
-      }
+      return Text("not find MultiHeaderListViewInfo");
     }
-    return SizedBox(
-      height: height,
-      width: width,
-      child: Stack(
-        children: builders
-            .map(
-              (e) => _CustomListView(position: position, builder: e),
-            )
-            .toList(),
+
+    if (position == MultiHeaderListViewPosition.topLeft) {
+      return model._state.topLeftHeader ?? SizedBox();
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final Size viewSize = Size(constraints.maxWidth, constraints.maxHeight);
+        final Size scrollSize;
+        final Axis axis;
+        final Iterable<MultiHeaderListViewTrack> builders;
+        switch (position) {
+          case MultiHeaderListViewPosition.top:
+            axis = Axis.horizontal;
+            scrollSize = Size(model.scrollWidth, model.topHeaderHeight);
+            builders = model._state.topHeaders;
+            break;
+
+          case MultiHeaderListViewPosition.left:
+            axis = Axis.vertical;
+            scrollSize = Size(model.leftHeaderWidth, model.scrollHeight);
+            builders = model._state.leftHeaders;
+            break;
+
+          case MultiHeaderListViewPosition.view:
+            axis = Axis.vertical;
+            scrollSize = Size(model.scrollWidth, model.scrollHeight);
+            builders = model._state.mainChildren;
+            break;
+
+          default:
+            axis = Axis.vertical;
+            scrollSize = Size.zero;
+            builders = [];
+            break;
+        }
+
+        if (builders.length == 0) {
+          return SizedBox.fromSize(
+            size: viewSize,
+            child: Stack(
+              children: [
+                _CustomListView(
+                  filling: true,
+                  maxSize: scrollSize,
+                  position: position,
+                  builder: MultiHeaderListViewTrack.fromList(axis, []),
+                ),
+              ],
+            ),
+          );
+        }
+
+        var box = SizedBox.fromSize(
+          size: viewSize,
+          child: Stack(
+            children: builders
+                .map<Widget>(
+                  (e) => _CustomListView(
+                    filling: e == builders.last,
+                    maxSize: scrollSize,
+                    position: position,
+                    builder: e,
+                  ),
+                )
+                .toList(),
+          ),
+        );
+
+        if (position != MultiHeaderListViewPosition.view) {
+          return box;
+        }
+
+        return Stack(
+          children: [
+            box,
+            _getScrollBar(Axis.vertical, model, viewSize, scrollSize, 20),
+            _getScrollBar(Axis.horizontal, model, viewSize, scrollSize, 20),
+          ],
+        );
+      },
+    );
+  }
+
+  static Widget _getScrollBar(
+    Axis axis,
+    MultiHeaderListViewInfo model,
+    Size viewSize,
+    Size scrollSize,
+    double thickness,
+  ) {
+    ScrollController controller;
+    Size boxSize;
+    double? scrollHeight;
+    double? scrollWidth;
+
+    switch (axis) {
+      case Axis.horizontal:
+        controller = model._state.viewScrollH;
+        boxSize = Size(
+          viewSize.width,
+          thickness,
+        );
+        scrollWidth = scrollSize.width;
+        break;
+      case Axis.vertical:
+        controller = model._state.viewScrollV;
+        boxSize = Size(
+          thickness,
+          viewSize.height,
+        );
+        scrollHeight = scrollSize.height;
+        break;
+    }
+
+    return Align(
+      alignment: Alignment.bottomRight,
+      child: SizedBox.fromSize(
+        size: boxSize,
+        child: Scrollbar(
+          controller: controller,
+          thickness: thickness,
+          child: SingleChildScrollView(
+            controller: controller,
+            scrollDirection: axis,
+            child: SizedBox(
+              width: scrollWidth,
+              height: scrollHeight,
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -241,11 +374,16 @@ class _ViewOfPosition extends StatelessWidget {
 
 class _CustomListView extends StatefulWidget {
   final MultiHeaderListViewTrack builder;
-  final MultiHeaderViewPosition position;
-
+  final MultiHeaderListViewPosition position;
+  final bool doPadding;
+  final Size maxSize;
+  final bool filling;
   const _CustomListView({
+    required this.maxSize,
+    required this.filling,
     required this.position,
     required this.builder,
+    this.doPadding = true,
     Key? key,
   }) : super(key: key);
 
@@ -255,21 +393,24 @@ class _CustomListView extends StatefulWidget {
 
 class _CustomListViewState extends State<_CustomListView> {
   MultiHeaderListViewTrack get builder => widget.builder;
-  MultiHeaderViewPosition get position => widget.position;
+  MultiHeaderListViewPosition get position => widget.position;
+  bool get doPadding => widget.doPadding;
+  Size get maxSize => widget.maxSize;
+  bool get filling => widget.filling;
   ScrollController? _controller;
   ScrollController? _subController;
   double cacheExtent = double.infinity;
 
   @override
   void dispose() {
-    super.dispose();
     _controller?.dispose();
     _subController?.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    var model = _Model.of(
+    var model = MultiHeaderListViewInfo.of(
       context,
       position,
     );
@@ -278,15 +419,11 @@ class _CustomListViewState extends State<_CustomListView> {
       return SizedBox();
     }
 
-    double? scrollSize;
-
     if (builder.direction == Axis.horizontal) {
-      scrollSize = model.scrollWidth;
       if (_controller == null) {
         _controller = model.scrollHorizontal.addAndGet();
       }
     } else {
-      scrollSize = model.scrollHeight;
       if (_controller == null) {
         _controller = model.scrollVertical.addAndGet();
       }
@@ -294,10 +431,10 @@ class _CustomListViewState extends State<_CustomListView> {
 
     var margin = model.scrollMargin;
     switch (position) {
-      case MultiHeaderViewPosition.top:
+      case MultiHeaderListViewPosition.top:
         margin = margin.copyWith(top: 0, bottom: 0);
         break;
-      case MultiHeaderViewPosition.left:
+      case MultiHeaderListViewPosition.left:
         margin = margin.copyWith(left: 0, right: 0);
         break;
       default:
@@ -307,16 +444,19 @@ class _CustomListViewState extends State<_CustomListView> {
     var listView = ListView.custom(
       key: ValueKey(_controller),
       controller: _controller,
+      physics: filling ? null : NeverScrollableScrollPhysics(),
       cacheExtent: cacheExtent,
       scrollDirection: builder.direction,
       childrenDelegate: _CustomChildrenDelegate(
-        scrollSize,
+        maxSize,
+        filling,
         margin,
+        doPadding,
         builder,
       ),
     );
 
-    if (position != MultiHeaderViewPosition.view) {
+    if (position != MultiHeaderListViewPosition.view) {
       return listView;
     }
 
@@ -347,37 +487,46 @@ class _CustomListViewState extends State<_CustomListView> {
 }
 
 class _CustomChildrenDelegate extends SliverChildBuilderDelegate {
-  final double scrollSize;
-  final EdgeInsets margin;
   _CustomChildrenDelegate(
-    this.scrollSize,
-    this.margin,
+    Size maxSize,
+    bool filling,
+    EdgeInsets margin,
+    bool doPadding,
     MultiHeaderListViewTrack builder,
   ) : super(
           (c, i) {
-            EdgeInsets padding;
-            if (builder.direction == Axis.horizontal) {
-              padding = EdgeInsets.only(
-                top: margin.top,
-                bottom: margin.bottom,
-              );
+            if (filling && i == builder.count) {
+              return SizedBox.fromSize(size: maxSize);
+            }
 
-              if (i == 0) {
-                padding += EdgeInsets.only(left: margin.left);
-              } else if (i == builder.count - 1) {
-                padding += EdgeInsets.only(right: margin.right);
+            EdgeInsets padding;
+
+            if (doPadding) {
+              if (builder.direction == Axis.horizontal) {
+                padding = EdgeInsets.only(
+                  top: margin.top,
+                  bottom: margin.bottom,
+                );
+
+                if (i == 0) {
+                  padding += EdgeInsets.only(left: margin.left);
+                } else if (i == builder.count - 1) {
+                  padding += EdgeInsets.only(right: margin.right);
+                }
+              } else {
+                padding = EdgeInsets.only(
+                  left: margin.left,
+                  right: margin.right,
+                );
+
+                if (i == 0) {
+                  padding += EdgeInsets.only(top: margin.top);
+                } else if (i == builder.count - 1) {
+                  padding += EdgeInsets.only(bottom: margin.bottom);
+                }
               }
             } else {
-              padding = EdgeInsets.only(
-                left: margin.left,
-                right: margin.right,
-              );
-
-              if (i == 0) {
-                padding += EdgeInsets.only(top: margin.top);
-              } else if (i == builder.count - 1) {
-                padding += EdgeInsets.only(bottom: margin.bottom);
-              }
+              padding = EdgeInsets.zero;
             }
 
             return Padding(
@@ -388,39 +537,25 @@ class _CustomChildrenDelegate extends SliverChildBuilderDelegate {
               ),
             );
           },
-          childCount: builder.count,
+          childCount: filling ? builder.count + 1 : builder.count,
         );
-
-  @override
-  double? estimateMaxScrollOffset(int firstIndex, int lastIndex,
-      double leadingScrollOffset, double trailingScrollOffset) {
-    return scrollSize;
-  }
 }
 
-enum MultiHeaderViewPosition {
-  top,
-  left,
-  topLeft,
-  view,
-}
-
-class _Model extends InheritedModel<MultiHeaderViewPosition> {
+class MultiHeaderListViewInfo
+    extends InheritedModel<MultiHeaderListViewPosition> {
+  final _MultiHeaderListViewState _state;
   final double leftHeaderWidth;
   final double topHeaderHeight;
-  final double contentsHeight;
-  final double contentsWidth;
+  final Size contentsSize;
   final EdgeInsets scrollMargin;
   final LinkedScrollControllerGroup scrollHorizontal;
   final LinkedScrollControllerGroup scrollVertical;
-  final _MultiHeaderListViewState _state;
 
-  _Model._(
+  MultiHeaderListViewInfo._(
     this._state, {
     required this.leftHeaderWidth,
     required this.topHeaderHeight,
-    required this.contentsHeight,
-    required this.contentsWidth,
+    required this.contentsSize,
     required this.scrollMargin,
     required this.scrollHorizontal,
     required this.scrollVertical,
@@ -428,7 +563,7 @@ class _Model extends InheritedModel<MultiHeaderViewPosition> {
     Key? key,
   }) : super(child: child, key: key);
 
-  _Model(
+  MultiHeaderListViewInfo(
       {required _MultiHeaderListViewState state,
       required Widget child,
       Key? key})
@@ -436,8 +571,7 @@ class _Model extends InheritedModel<MultiHeaderViewPosition> {
           state,
           leftHeaderWidth: state.leftHeaderWidth,
           topHeaderHeight: state.topHeaderHeight,
-          contentsHeight: state.contentsHeight,
-          contentsWidth: state.contentsWidth,
+          contentsSize: state.contentsSize,
           scrollMargin: state.scrollMargin,
           scrollHorizontal: state._scrollHorizontal,
           scrollVertical: state._scrollVertical,
@@ -445,52 +579,53 @@ class _Model extends InheritedModel<MultiHeaderViewPosition> {
           key: key,
         );
 
-  double get scrollWidth => contentsWidth + scrollMargin.horizontal;
-  double get scrollHeight => contentsHeight + scrollMargin.vertical;
+  double get scrollWidth => contentsSize.width + scrollMargin.horizontal;
+  double get scrollHeight => contentsSize.height + scrollMargin.vertical;
 
-  static _Model? of(BuildContext context, MultiHeaderViewPosition aspect) {
-    return InheritedModel.inheritFrom<_Model>(
+  static MultiHeaderListViewInfo? of(
+      BuildContext context, MultiHeaderListViewPosition aspect) {
+    return InheritedModel.inheritFrom<MultiHeaderListViewInfo>(
       context,
       aspect: aspect,
     );
   }
 
   @override
-  bool updateShouldNotify(covariant _Model old) {
-    return (contentsHeight != old.contentsHeight) ||
-        (contentsWidth != old.contentsWidth) ||
+  bool updateShouldNotify(covariant MultiHeaderListViewInfo old) {
+    var ret = (contentsSize != old.contentsSize) ||
         (topHeaderHeight != old.topHeaderHeight) ||
         (leftHeaderWidth != old.leftHeaderWidth);
+    return ret;
   }
 
   @override
-  bool updateShouldNotifyDependent(
-      covariant _Model old, Set<MultiHeaderViewPosition> dependencies) {
+  bool updateShouldNotifyDependent(covariant MultiHeaderListViewInfo old,
+      Set<MultiHeaderListViewPosition> dependencies) {
     for (var depend in dependencies) {
       switch (depend) {
-        case MultiHeaderViewPosition.top:
-          if ((contentsWidth != old.contentsWidth) ||
-              (topHeaderHeight != old.topHeaderHeight)) {
-            return true;
-          }
-          break;
-
-        case MultiHeaderViewPosition.left:
-          if ((leftHeaderWidth != old.leftHeaderWidth) ||
-              (contentsHeight != old.contentsHeight)) {
-            return true;
-          }
-          break;
-
-        case MultiHeaderViewPosition.topLeft:
+        case MultiHeaderListViewPosition.topLeft:
           if ((leftHeaderWidth != old.leftHeaderWidth) ||
               (topHeaderHeight != old.topHeaderHeight)) {
             return true;
           }
           break;
-        case MultiHeaderViewPosition.view:
-          if ((contentsWidth != old.contentsWidth) ||
-              (contentsHeight != old.contentsHeight)) {
+
+        case MultiHeaderListViewPosition.top:
+          if ((contentsSize.width != old.contentsSize.width) ||
+              (topHeaderHeight != old.topHeaderHeight)) {
+            return true;
+          }
+          break;
+
+        case MultiHeaderListViewPosition.left:
+          if ((leftHeaderWidth != old.leftHeaderWidth) ||
+              (contentsSize.height != old.contentsSize.height)) {
+            return true;
+          }
+          break;
+
+        case MultiHeaderListViewPosition.view:
+          if (contentsSize != old.contentsSize) {
             return true;
           }
           break;

@@ -68,8 +68,10 @@ class _TimelineEventsState extends State<TimelineEvents>
   @override
   Widget build(BuildContext context) {
     var view = MultiHeaderListView(
-      contentsHeight: trackHeight * notSelectedElements.length,
-      contentsWidth: unitWidth * trackEnd.position,
+      contentsSize: Size(
+        unitWidth * trackEnd.position ,
+        trackHeight * notSelectedElements.length,
+      ),
       leftHeaderWidth: trackHeaderWidth,
       topHeaderHeight: scaleHeaderHeight,
       scrollMargin: EdgeInsets.fromLTRB(1, 1, 100, 100),
@@ -87,6 +89,10 @@ class _TimelineEventsState extends State<TimelineEvents>
               return i < trackEnd.position ? i.toString() : "";
             },
           ).split(),
+        ),
+        MultiHeaderListViewTrack.fromList(
+          Axis.vertical,
+          [Text("left")],
         )
       ],
       mainChildren: [
@@ -126,7 +132,6 @@ class _TimelineEventsState extends State<TimelineEvents>
         unitWidth = _scallingUnitWidth * detail.scale;
       },
     );
-
     var model = TimelineEventsEditor(
       state: this,
       child: gesture,
