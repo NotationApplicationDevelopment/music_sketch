@@ -217,52 +217,7 @@ class TimelineEventsState extends State<TimelineEvents>
             ],
           ),
         ),
-        topHeaders: Scale(
-          height: _headerHeight,
-          widthAsUnit: trackEnd.position + (whiteSpaceH / unitWidth),
-          unitWidth: unitWidth,
-          subSplit: 8,
-          color: Colors.grey,
-          text: (i, p) => i < trackEnd.position ? " ${(i + 1)} " : "",
-        ).split().asMap().entries.map((e) {
-          return GestureDetector(
-            child: e.value,
-            onDoubleTap: () {
-              doAllElement((state) {
-                state.setState(() {
-                  state.isSelected = false;
-                });
-              });
-            },
-            onLongPressStart: (detail) {
-              var localPos = Offset(
-                detail.localPosition.dx + unitWidth * e.key,
-                detail.localPosition.dy,
-              );
-              doAllTrack((state) {
-                state.onLongPressStart(localPos);
-              });
-            },
-            onLongPressMoveUpdate: (detail) {
-              var localPos = Offset(
-                detail.localPosition.dx + unitWidth * e.key,
-                detail.localPosition.dy,
-              );
-              doAllTrack((state) {
-                state.onLongPressMoveUpdate(localPos);
-              });
-            },
-            onLongPressEnd: (detail) {
-              var localPos = Offset(
-                detail.localPosition.dx + unitWidth * e.key,
-                detail.localPosition.dy,
-              );
-              doAllTrack((state) {
-                state.onLongPressEnd(localPos);
-              });
-            },
-          );
-        }).toList(),
+        topHeaders:[],
         leftHeaders: tracks
                 .map(
                   (e) => SizedBox(
@@ -282,13 +237,6 @@ class TimelineEventsState extends State<TimelineEvents>
               )
             ],
         mainChildren: {
-          Scale(
-                height: _trackHeight * tracks.length,
-                widthAsUnit: trackEnd.position + 0.1,
-                unitWidth: unitWidth,
-                subSplit: 4,
-                color: Colors.grey,
-              ).split() +
               [
                 SizedBox(
                   width: whiteSpaceH,

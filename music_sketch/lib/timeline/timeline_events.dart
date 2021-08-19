@@ -79,16 +79,16 @@ class _TimelineEventsState extends State<TimelineEvents>
       headers: [
         MultiHeaderListViewTrack.fromList(
           Axis.horizontal,
-          Scale(
+          ScaleFactory.fromWidthAsUnit(
             height: scaleHeaderHeight,
-            widthAsUnit: trackEnd.position + 100 / unitWidth,
+            widthAsUnit: trackEnd.position + 100/unitWidth,
             unitWidth: unitWidth,
             subSplit: 4,
             color: Colors.grey,
             text: (i, d) {
               return i < trackEnd.position ? i.toString() : "";
             },
-          ).split(),
+          ).asUnitList(),
         ),
         MultiHeaderListViewTrack.fromList(
           Axis.vertical,
@@ -98,13 +98,13 @@ class _TimelineEventsState extends State<TimelineEvents>
       mainChildren: [
         MultiHeaderListViewTrack.fromList(
           Axis.horizontal,
-          Scale(
+          ScaleFactory.fromWidthAsUnit(
             height: trackHeight * notSelectedElements.length,
             widthAsUnit: trackEnd.position,
             unitWidth: unitWidth,
             subSplit: 4,
             color: Colors.grey,
-          ).split(),
+          ).asUnitList(),
         ),
         MultiHeaderListViewTrack.fromList(
           Axis.vertical,
@@ -240,6 +240,17 @@ class _TopLeftHeader extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _EventsScaleUnit extends StatelessWidget {
+  const _EventsScaleUnit({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      child: null,
     );
   }
 }

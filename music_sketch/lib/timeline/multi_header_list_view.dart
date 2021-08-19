@@ -73,17 +73,8 @@ class _MultiHeaderListViewState extends State<MultiHeaderListView> {
   @override
   void initState() {
     super.initState();
-    _scrollHorizontal = _initScrollGroup(
-      () => _viewSize.width,
-      () => contentsSize.width,
-      () => scrollMargin.horizontal,
-    );
-    _scrollVertical = _initScrollGroup(
-      () => _viewSize.height,
-      () => contentsSize.height,
-      () => scrollMargin.vertical,
-    );
-
+    _scrollHorizontal = LinkedScrollControllerGroup();
+    _scrollVertical = LinkedScrollControllerGroup();
     viewScrollH = _scrollHorizontal.addAndGet();
     viewScrollV = _scrollVertical.addAndGet();
   }
@@ -95,26 +86,35 @@ class _MultiHeaderListViewState extends State<MultiHeaderListView> {
     super.dispose();
   }
 
-  static LinkedScrollControllerGroup _initScrollGroup(
-    double Function() viewSize,
-    double Function() contentsSize,
-    double Function() scrollMargin,
-  ) {
-    var group = LinkedScrollControllerGroup();
-    return group
-      ..addOffsetChangedListener(
-        () {
-          double contents = contentsSize();
-          double max = (viewSize() >= contents)
-              ? 0
-              : contents - viewSize() + scrollMargin();
-          if (group.offset > max) {
-            Future.microtask(() {
-              group.jumpTo(max);
-            });
-          }
-        },
-      );
+  void _initScroll(ScrollController controller, Axis axis) {
+    controller.addListener(() {
+      double view;
+      double contents;
+      double margin;
+
+      switch (axis) {
+        case Axis.horizontal:
+          view = _viewSize.width;
+          contents = contentsSize.width;
+          margin = scrollMargin.horizontal;
+          break;
+        case Axis.vertical:
+          view = _viewSize.height;
+          contents = contentsSize.height;
+          margin = scrollMargin.vertical;
+          break;
+      }
+
+      double max = contents - view + margin;
+      if (max < 0) {
+        max = 0;
+      }
+      if (controller.offset > max) {
+        Future.microtask(() {
+          controller.jumpTo(max);
+        });
+      }
+    });
   }
 
   @override
@@ -421,10 +421,12 @@ class _CustomListViewState extends State<_CustomListView> {
     if (builder.direction == Axis.horizontal) {
       if (_controller == null) {
         _controller = model.scrollHorizontal.addAndGet();
+        model._state._initScroll(_controller!, Axis.horizontal);
       }
     } else {
       if (_controller == null) {
         _controller = model.scrollVertical.addAndGet();
+        model._state._initScroll(_controller!, Axis.vertical);
       }
     }
 
@@ -464,11 +466,13 @@ class _CustomListViewState extends State<_CustomListView> {
       subDirection = Axis.horizontal;
       if (_subController == null) {
         _subController = model.scrollHorizontal.addAndGet();
+        model._state._initScroll(_subController!, Axis.horizontal);
       }
     } else {
       subDirection = Axis.vertical;
       if (_subController == null) {
         _subController = model.scrollVertical.addAndGet();
+        model._state._initScroll(_subController!, Axis.vertical);
       }
     }
 

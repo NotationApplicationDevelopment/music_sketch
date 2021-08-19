@@ -1,5 +1,87 @@
 import 'package:flutter/material.dart';
 
+class ScaleFactory {
+  final int length;
+  final double lastWidth;
+  final double height;
+  final double unitWidth;
+  final int subSplit;
+  final String Function(int index, double pos)? text;
+  final Color color;
+
+  factory ScaleFactory.fromWidthAsUnit({
+    required double widthAsUnit,
+    required double height,
+    required double unitWidth,
+    required int subSplit,
+    required Color color,
+    String Function(int index, double pos)? text,
+  }) {
+    int floor = widthAsUnit.floor();
+    int length = floor + 1;
+    double lastWidth = (widthAsUnit - floor) * unitWidth;
+    return ScaleFactory(
+      length: length,
+      lastWidth: lastWidth,
+      height: height,
+      unitWidth: unitWidth,
+      subSplit: subSplit,
+      color: color,
+      text: text,
+    );
+  }
+
+  ScaleFactory({
+    required this.length,
+    required this.lastWidth,
+    required this.height,
+    required this.unitWidth,
+    required this.subSplit,
+    required this.color,
+    this.text,
+  }){
+
+  }
+
+  Scale asScale() {
+    return Scale(
+      height: height,
+      widthAsUnit: length - 1 + lastWidth,
+      unitWidth: unitWidth,
+      subSplit: subSplit,
+      color: color,
+      text: text,
+    );
+  }
+
+  ScaleUnit? asUnitAtIndex(int index) {
+    if (index >= length) {
+      return null;
+    }
+
+    bool isLast = (index == length - 1);
+    return ScaleUnit(
+      height,
+      index,
+      isLast ? lastWidth : unitWidth,
+      unitWidth,
+      subSplit,
+      text,
+      color,
+      isLast,
+    );
+  }
+
+  List<ScaleUnit> asUnitList() {
+    return List.generate(
+      length ,
+      (index) {
+        return asUnitAtIndex(index)!;
+      },
+    );
+  }
+}
+
 class Scale extends StatelessWidget {
   final double height;
   final double widthAsUnit;
@@ -17,28 +99,6 @@ class Scale extends StatelessWidget {
     this.text,
     Key? key,
   }) : super(key: key);
-
-  List<Widget> split() {
-    int length = widthAsUnit.floor();
-    double lastWidth = (widthAsUnit - length) * unitWidth;
-
-    return List.generate(
-      length + 1,
-      (index) {
-        bool isLast = index == length;
-        return _SplitedScale(
-          height,
-          index,
-          isLast ? lastWidth : unitWidth,
-          unitWidth,
-          subSplit,
-          text,
-          color,
-          isLast,
-        );
-      },
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -80,7 +140,7 @@ class Scale extends StatelessWidget {
   }
 }
 
-class _SplitedScale extends StatelessWidget {
+class ScaleUnit extends StatelessWidget {
   final double height;
   final int indexAsUnit;
   final double widthAsUnit;
@@ -90,7 +150,7 @@ class _SplitedScale extends StatelessWidget {
   final Color color;
   final bool isFinal;
 
-  const _SplitedScale(
+  const ScaleUnit(
     this.height,
     this.indexAsUnit,
     this.widthAsUnit,
