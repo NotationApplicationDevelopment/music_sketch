@@ -108,7 +108,6 @@ class _MultiHeaderListViewState extends State<MultiHeaderListView> {
           double max = (viewSize() >= contents)
               ? 0
               : contents - viewSize() + scrollMargin();
-          print("${group.offset} / $max");
           if (group.offset > max) {
             Future.microtask(() {
               group.jumpTo(max);
