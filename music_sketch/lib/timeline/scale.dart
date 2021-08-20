@@ -39,9 +39,7 @@ class ScaleFactory {
     required this.subSplit,
     required this.color,
     this.text,
-  }){
-
-  }
+  });
 
   Scale asScale() {
     return Scale(

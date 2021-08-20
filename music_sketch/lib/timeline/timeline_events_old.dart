@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:linked_scroll_controller/linked_scroll_controller.dart';
 import 'package:music_sketch/timeline/timeline_element_old.dart';
-import 'package:music_sketch/timeline/scale.dart';
 import 'package:music_sketch/timeline/timeline_times.dart';
 import 'multi_header_list_view_old.dart';
 import 'timeline_data.dart';

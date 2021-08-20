@@ -1,4 +1,7 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 import 'package:linked_scroll_controller/linked_scroll_controller.dart';
 
@@ -65,6 +68,7 @@ class _MultiHeaderListViewState extends State<MultiHeaderListView> {
   late final ScrollController viewScrollV;
 
   Size _viewSize = Size.zero;
+  Size _scrollMax = Size.zero;
   bool _isInit = true;
   Size _beforeContentsSize = Size(1, 1);
   List<MultiHeaderListViewTrack> topHeaders = [];
@@ -86,35 +90,33 @@ class _MultiHeaderListViewState extends State<MultiHeaderListView> {
     super.dispose();
   }
 
-  void _initScroll(ScrollController controller, Axis axis) {
-    controller.addListener(() {
-      double view;
-      double contents;
-      double margin;
+  ScrollController _getScroller(Axis axis) {
+    var controller =
+        (axis == Axis.horizontal ? _scrollHorizontal : _scrollVertical)
+            .addAndGet();
+    controller.addListener(
+      () {
+        double max;
+        switch (axis) {
+          case Axis.horizontal:
+            max = _scrollMax.width;
+            break;
+          case Axis.vertical:
+            max = _scrollMax.height;
+            break;
+        }
 
-      switch (axis) {
-        case Axis.horizontal:
-          view = _viewSize.width;
-          contents = contentsSize.width;
-          margin = scrollMargin.horizontal;
-          break;
-        case Axis.vertical:
-          view = _viewSize.height;
-          contents = contentsSize.height;
-          margin = scrollMargin.vertical;
-          break;
-      }
+        var p = controller.position;
+        if (p.pixels > max) {
+          Future.microtask(() {
+            //p.applyContentDimensions(0, max);
+            p.jumpTo(max);
+          });
+        }
+      },
+    );
 
-      double max = contents - view + margin;
-      if (max < 0) {
-        max = 0;
-      }
-      if (controller.offset > max) {
-        Future.microtask(() {
-          controller.jumpTo(max);
-        });
-      }
-    });
+    return controller;
   }
 
   @override
@@ -153,6 +155,13 @@ class _MultiHeaderListViewState extends State<MultiHeaderListView> {
           _viewSize = Size(
             maxSize.width - leftHeaderWidth,
             maxSize.height - topHeaderHeight,
+          );
+
+          _scrollMax = Size(
+            max(0.0,
+                contentsSize.width - _viewSize.width + scrollMargin.horizontal),
+            max(0.0,
+                contentsSize.height - _viewSize.height + scrollMargin.vertical),
           );
 
           var topLeft = const _ViewOfPosition(
@@ -420,13 +429,11 @@ class _CustomListViewState extends State<_CustomListView> {
 
     if (builder.direction == Axis.horizontal) {
       if (_controller == null) {
-        _controller = model.scrollHorizontal.addAndGet();
-        model._state._initScroll(_controller!, Axis.horizontal);
+        _controller = model._state._getScroller(Axis.horizontal);
       }
     } else {
       if (_controller == null) {
-        _controller = model.scrollVertical.addAndGet();
-        model._state._initScroll(_controller!, Axis.vertical);
+        _controller = model._state._getScroller(Axis.vertical);
       }
     }
 
@@ -441,7 +448,6 @@ class _CustomListViewState extends State<_CustomListView> {
       default:
         break;
     }
-
     var listView = ListView.custom(
       key: ValueKey(_controller),
       controller: _controller,
@@ -449,6 +455,7 @@ class _CustomListViewState extends State<_CustomListView> {
       cacheExtent: cacheExtent,
       scrollDirection: builder.direction,
       childrenDelegate: _CustomChildrenDelegate(
+        _controller!,
         maxSize,
         filling,
         margin,
@@ -465,14 +472,12 @@ class _CustomListViewState extends State<_CustomListView> {
     if (builder.direction == Axis.vertical) {
       subDirection = Axis.horizontal;
       if (_subController == null) {
-        _subController = model.scrollHorizontal.addAndGet();
-        model._state._initScroll(_subController!, Axis.horizontal);
+        _subController = model._state._getScroller(Axis.horizontal);
       }
     } else {
       subDirection = Axis.vertical;
       if (_subController == null) {
-        _subController = model.scrollVertical.addAndGet();
-        model._state._initScroll(_subController!, Axis.vertical);
+        _subController = model._state._getScroller(Axis.vertical);
       }
     }
 
@@ -491,57 +496,69 @@ class _CustomListViewState extends State<_CustomListView> {
 
 class _CustomChildrenDelegate extends SliverChildBuilderDelegate {
   _CustomChildrenDelegate(
+    ScrollController controller,
     Size maxSize,
     bool filling,
     EdgeInsets margin,
     bool doPadding,
-    MultiHeaderListViewTrack builder,
+    MultiHeaderListViewTrack _builder,
   ) : super(
-          (c, i) {
-            if (filling && i == builder.count) {
-              return SizedBox.fromSize(size: maxSize);
-            }
-
-            EdgeInsets padding;
-
-            if (doPadding) {
-              if (builder.direction == Axis.horizontal) {
-                padding = EdgeInsets.only(
-                  top: margin.top,
-                  bottom: margin.bottom,
-                );
-
-                if (i == 0) {
-                  padding += EdgeInsets.only(left: margin.left);
-                } else if (i == builder.count - 1) {
-                  padding += EdgeInsets.only(right: margin.right);
-                }
-              } else {
-                padding = EdgeInsets.only(
-                  left: margin.left,
-                  right: margin.right,
-                );
-
-                if (i == 0) {
-                  padding += EdgeInsets.only(top: margin.top);
-                } else if (i == builder.count - 1) {
-                  padding += EdgeInsets.only(bottom: margin.bottom);
-                }
-              }
-            } else {
-              padding = EdgeInsets.zero;
-            }
-
-            return Padding(
-              padding: padding,
-              child: Align(
-                alignment: Alignment.topLeft,
-                child: builder.builder(c, i),
-              ),
-            );
-          },
-          childCount: filling ? builder.count + 1 : builder.count,
+          (c, i) => myBuilder(
+              c, i, controller, maxSize, filling, margin, doPadding, _builder),
+          childCount: filling ? _builder.count + 1 : _builder.count,
         );
+
+  static Widget myBuilder(
+      BuildContext c,
+      int i,
+      ScrollController controller,
+      Size maxSize,
+      bool filling,
+      EdgeInsets margin,
+      bool doPadding,
+      MultiHeaderListViewTrack builder) {
+    if (filling && i == builder.count) {
+      return SizedBox.fromSize(size: maxSize);
+    }
+
+    EdgeInsets padding;
+
+    if (doPadding) {
+      if (builder.direction == Axis.horizontal) {
+        padding = EdgeInsets.only(
+          top: margin.top,
+          bottom: margin.bottom,
+        );
+
+        if (i == 0) {
+          padding += EdgeInsets.only(left: margin.left);
+        } else if (i == builder.count - 1) {
+          padding += EdgeInsets.only(right: margin.right);
+        }
+      } else {
+        padding = EdgeInsets.only(
+          left: margin.left,
+          right: margin.right,
+        );
+
+        if (i == 0) {
+          padding += EdgeInsets.only(top: margin.top);
+        } else if (i == builder.count - 1) {
+          padding += EdgeInsets.only(bottom: margin.bottom);
+        }
+      }
+    } else {
+      padding = EdgeInsets.zero;
+    }
+
+    return Padding(
+      padding: padding,
+      child: Align(
+        alignment: Alignment.topLeft,
+        child: builder.builder(c, i),
+      ),
+    );
+  }
 }
 
 class MultiHeaderListViewInfo

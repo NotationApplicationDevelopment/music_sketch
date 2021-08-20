@@ -69,7 +69,7 @@ class _TimelineEventsState extends State<TimelineEvents>
   Widget build(BuildContext context) {
     var view = MultiHeaderListView(
       contentsSize: Size(
-        unitWidth * trackEnd.position ,
+        unitWidth * trackEnd.position,
         trackHeight * notSelectedElements.length,
       ),
       leftHeaderWidth: trackHeaderWidth,
@@ -81,7 +81,7 @@ class _TimelineEventsState extends State<TimelineEvents>
           Axis.horizontal,
           ScaleFactory.fromWidthAsUnit(
             height: scaleHeaderHeight,
-            widthAsUnit: trackEnd.position + 100/unitWidth,
+            widthAsUnit: trackEnd.position + 100 / unitWidth,
             unitWidth: unitWidth,
             subSplit: 4,
             color: Colors.grey,
@@ -92,7 +92,15 @@ class _TimelineEventsState extends State<TimelineEvents>
         ),
         MultiHeaderListViewTrack.fromList(
           Axis.vertical,
-          [Text("left")],
+          [
+            SizedBox(
+              height: trackHeight * notSelectedElements.length * 1.5,
+              child: FittedBox(
+                fit : BoxFit.fill,
+                child: Text("left"),
+              ),
+            )
+          ],
         )
       ],
       mainChildren: [
