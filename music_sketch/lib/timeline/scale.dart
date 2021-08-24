@@ -1,54 +1,107 @@
 import 'package:flutter/material.dart';
 
 class ScaleFactory {
-  final int length;
-  final double lastWidth;
-  final double height;
-  final double unitWidth;
-  final int subSplit;
-  final String Function(int index, double pos)? text;
-  final Color color;
+  double _widthAsUnit;
+  late int _length;
+  late double _lastWidth;
+  double _unitWidth;
+  double _height;
+  int _subSplit;
 
-  factory ScaleFactory.fromWidthAsUnit({
-    required double widthAsUnit,
-    required double height,
-    required double unitWidth,
-    required int subSplit,
-    required Color color,
+  double get widthAsUnit => _widthAsUnit;
+  int get length => _length;
+  double get lastWidth => _lastWidth;
+  set widthAsUnit(double widthAsUnit) {
+    assert(widthAsUnit >= 0);
+    _widthAsUnit = widthAsUnit;
+    int ceil = widthAsUnit.ceil();
+    int floor = (widthAsUnit - 1).ceil();
+    this._length = ceil;
+    this._lastWidth = (widthAsUnit - floor) * _unitWidth;
+  }
+
+  double get unitWidth => _unitWidth;
+  set unitWidth(double unitWidth) {
+    assert(unitWidth >= 0);
+    _unitWidth = unitWidth;
+  }
+
+  double get height => _height;
+  set height(double height) {
+    assert(height >= 0);
+    _height = height;
+  }
+
+  int get subSplit => _subSplit;
+  set subSplit(int subSplit) {
+    assert(subSplit > 0);
+    _subSplit = subSplit;
+  }
+
+  String Function(int index, double pos)? text;
+  Color color;
+
+  factory ScaleFactory({
+    double widthAsUnit = 0,
+    double height = 0,
+    double unitWidth = 0,
+    int subSplit = 0,
+    Color color = Colors.grey,
     String Function(int index, double pos)? text,
   }) {
-    int floor = widthAsUnit.floor();
-    int length = floor + 1;
-    double lastWidth = (widthAsUnit - floor) * unitWidth;
-    return ScaleFactory(
-      length: length,
-      lastWidth: lastWidth,
-      height: height,
-      unitWidth: unitWidth,
-      subSplit: subSplit,
-      color: color,
-      text: text,
+    return ScaleFactory._(
+      widthAsUnit,
+      height,
+      unitWidth,
+      subSplit,
+      color,
+      text,
     );
   }
 
-  ScaleFactory({
-    required this.length,
-    required this.lastWidth,
-    required this.height,
-    required this.unitWidth,
-    required this.subSplit,
-    required this.color,
+  ScaleFactory._(
+    this._widthAsUnit,
+    this._height,
+    this._unitWidth,
+    this._subSplit,
+    this.color,
     this.text,
-  });
+  ) {
+    int ceil = _widthAsUnit.ceil();
+    int floor = (_widthAsUnit - 1).ceil();
+    this._length = ceil;
+    this._lastWidth = (_widthAsUnit - floor) * _unitWidth;
+  }
 
-  Scale asScale() {
-    return Scale(
-      height: height,
-      widthAsUnit: length - 1 + lastWidth,
-      unitWidth: unitWidth,
-      subSplit: subSplit,
-      color: color,
-      text: text,
+  void updateWith(
+      {double? widthAsUnit,
+      double? height,
+      double? unitWidth,
+      int? subSplit,
+      Color? color}) {
+    if (height != null) {
+      this.height = height;
+    }
+    if (unitWidth != null) {
+      this.unitWidth = unitWidth;
+    }
+    if (subSplit != null) {
+      this.subSplit = subSplit;
+    }
+    if (color != null) {
+      this.color = color;
+    }
+    if (widthAsUnit != null) {
+      this.widthAsUnit = widthAsUnit;
+    }
+  }
+
+  List<ScaleUnit> asUnitList() {
+    return List.generate(
+      length,
+      (index) {
+        return asUnitAtIndex(index)!;
+      },
     );
   }
 
@@ -67,73 +120,6 @@ class ScaleFactory {
       text,
       color,
       isLast,
-    );
-  }
-
-  List<ScaleUnit> asUnitList() {
-    return List.generate(
-      length ,
-      (index) {
-        return asUnitAtIndex(index)!;
-      },
-    );
-  }
-}
-
-class Scale extends StatelessWidget {
-  final double height;
-  final double widthAsUnit;
-  final double unitWidth;
-  final int subSplit;
-  final String Function(int index, double pos)? text;
-  final Color color;
-
-  const Scale({
-    required this.height,
-    required this.widthAsUnit,
-    required this.unitWidth,
-    required this.subSplit,
-    required this.color,
-    this.text,
-    Key? key,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    int length = widthAsUnit.ceil();
-    double lastWidth = (widthAsUnit % 1.0) * unitWidth;
-    return new RepaintBoundary(
-      child: CustomPaint(
-        isComplex: true,
-        willChange: false,
-        child: SizedBox(
-          height: height,
-          width: widthAsUnit * unitWidth,
-          child: text == null
-              ? null
-              : Row(
-                  children: List.generate(
-                    length,
-                    (index) {
-                      bool isLast = index + 1 == length;
-                      return SizedBox(
-                        width: isLast ? lastWidth : unitWidth,
-                        child: FittedBox(
-                          alignment: Alignment.centerLeft,
-                          child: RichText(
-                            text: TextSpan(
-                              text: text!(index, index * unitWidth),
-                              style: Theme.of(context).textTheme.bodyText2,
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-        ),
-        painter: _ScalePainter(unitWidth, subSplit, color, true),
-      ),
     );
   }
 }

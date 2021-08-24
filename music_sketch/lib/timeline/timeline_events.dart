@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:music_sketch/timeline/timeline_data.dart';
 import 'package:music_sketch/timeline/timeline_times.dart';
+import 'package:music_sketch/timeline/timeline_track.dart';
 
 import 'multi_header_list_view.dart';
 import 'scale.dart';
@@ -29,16 +30,19 @@ class _TimelineEventsState extends State<TimelineEvents>
     implements TimelineDataFactry {
   double trackHeaderWidth = 100;
   double scaleHeaderHeight = 30;
-  Set<String> editedTracks = {};
-  Set<TimelineElementData> editedElements = {};
   final Map<String, Set<TimelineElementData>> selectedElements = {};
   final Map<String, Set<TimelineElementData>> notSelectedElements = {};
+  late final _ScaleBuilder _topScale;
+  late final _ScaleBuilder _backScale;
 
   late double trackHeight;
   late TimelinePosition trackEnd;
   late double _unitWidth;
 
   double _scallingUnitWidth = 0;
+  double _scallingTrackHeight = 0;
+
+  final Map<String, TimelineTrackState> _tracks = {};
 
   double get unitWidth => _unitWidth;
 
@@ -58,6 +62,25 @@ class _TimelineEventsState extends State<TimelineEvents>
     trackHeight = widget.initialTrackHeight;
     trackEnd = widget.initialTrackEnd;
     addTracks(widget.initEventDatas);
+
+    _topScale = _ScaleBuilder(
+      ScaleFactory(text: (i, d) {
+        return i < this.trackEnd.position ? (i + 1).toString() : "";
+      }),
+      TimelineEventsEditInfo(updateWith: {
+        TimelineEventsUpdateWith.scaleHedaerHeight,
+        TimelineEventsUpdateWith.unitWidth,
+        TimelineEventsUpdateWith.trackEnd,
+      }),
+    );
+
+    _backScale = _ScaleBuilder(
+      ScaleFactory(text: null),
+      TimelineEventsEditInfo(updateWith: {
+        TimelineEventsUpdateWith.unitWidth,
+        TimelineEventsUpdateWith.trackEnd,
+      }),
+    );
   }
 
   void addTracks(Map<String, Set<TimelineElementData>> tracks) {
@@ -67,6 +90,23 @@ class _TimelineEventsState extends State<TimelineEvents>
 
   @override
   Widget build(BuildContext context) {
+    _topScale.scale.updateWith(
+      widthAsUnit: trackEnd.position + 100 / _unitWidth,
+      height: scaleHeaderHeight,
+      unitWidth: unitWidth,
+      subSplit: 4,
+    );
+
+    _backScale.scale.updateWith(
+      widthAsUnit: trackEnd.position,
+      height: trackHeight * notSelectedElements.length,
+      unitWidth: unitWidth,
+      subSplit: 4,
+    );
+    int count = 0;
+    for (var track in selectedElements.values) {
+      count += track.length;
+    }
     var view = MultiHeaderListView(
       contentsSize: Size(
         unitWidth * trackEnd.position,
@@ -77,26 +117,13 @@ class _TimelineEventsState extends State<TimelineEvents>
       scrollMargin: EdgeInsets.fromLTRB(1, 1, 100, 100),
       topLeftHeader: const _TopLeftHeader(),
       headers: [
-        MultiHeaderListViewTrack.fromList(
-          Axis.horizontal,
-          ScaleFactory.fromWidthAsUnit(
-            height: scaleHeaderHeight,
-            widthAsUnit: trackEnd.position + 100 / unitWidth,
-            unitWidth: unitWidth,
-            subSplit: 4,
-            color: Colors.grey,
-            text: (i, d) {
-              return i < trackEnd.position ? i.toString() : "";
-            },
-          ).asUnitList(),
-        ),
+        _topScale.builder(),
         MultiHeaderListViewTrack.fromList(
           Axis.vertical,
           [
             SizedBox(
               height: trackHeight * notSelectedElements.length * 1.5,
               child: FittedBox(
-                fit : BoxFit.fill,
                 child: Text("left"),
               ),
             )
@@ -104,29 +131,15 @@ class _TimelineEventsState extends State<TimelineEvents>
         )
       ],
       mainChildren: [
-        MultiHeaderListViewTrack.fromList(
-          Axis.horizontal,
-          ScaleFactory.fromWidthAsUnit(
-            height: trackHeight * notSelectedElements.length,
-            widthAsUnit: trackEnd.position,
-            unitWidth: unitWidth,
-            subSplit: 4,
-            color: Colors.grey,
-          ).asUnitList(),
-        ),
-        MultiHeaderListViewTrack.fromList(
+        _backScale.builder(),
+        MultiHeaderListViewTrack(
           Axis.vertical,
-          notSelectedElements.entries.map((e) {
-            return Container(
-              height: trackHeight,
-              width: unitWidth * trackEnd.position,
-              decoration: BoxDecoration(
-                border: Border.all(color: Colors.grey),
-              ),
-              child: Text(e.key),
-            );
-          }),
-        )
+          () => notSelectedElements.length,
+          (context, index) {
+            var name = notSelectedElements.keys.elementAt(index);
+            return TimelineTrack(trackName: name);
+          },
+        ),
       ],
     );
 
@@ -135,25 +148,21 @@ class _TimelineEventsState extends State<TimelineEvents>
       behavior: HitTestBehavior.translucent,
       onScaleStart: (detail) {
         _scallingUnitWidth = unitWidth;
+        _scallingTrackHeight = trackHeight;
       },
       onScaleUpdate: (detail) {
         unitWidth = _scallingUnitWidth * detail.scale;
+        trackHeight = _scallingTrackHeight * detail.scale;
       },
     );
+
     var model = TimelineEventsEditor(
       state: this,
       child: gesture,
     );
 
-    editedTracks.clear();
-    editedElements.clear();
-
     return model;
   }
-
-  void updateElement(e) => editedElements.add(e);
-
-  void updateTrack(t) => editedTracks.add(t);
 
   @override
   Map<String, List<TimelineElementData>> getDatas() {
@@ -185,7 +194,10 @@ class _TopLeftHeader extends StatelessWidget {
     final model = TimelineEventsEditor.of(
       context,
       TimelineEventsEditInfo(
-        type: TimelineEventsEditType.fromTopLeftHeader,
+        updateWith: {
+          TimelineEventsUpdateWith.trackHeaderWidth,
+          TimelineEventsUpdateWith.scaleHedaerHeight,
+        },
       ),
     );
 
@@ -218,6 +230,7 @@ class _TopLeftHeader extends StatelessWidget {
             ),
             onTap: () {
               model!.unitWidth /= 1.1;
+              model.trackHeight /= 1.1;
             },
           ),
           InkWell(
@@ -244,6 +257,7 @@ class _TopLeftHeader extends StatelessWidget {
             ),
             onTap: () {
               model!.unitWidth *= 1.1;
+              model.trackHeight *= 1.1;
             },
           ),
         ],
@@ -252,42 +266,229 @@ class _TopLeftHeader extends StatelessWidget {
   }
 }
 
-class _EventsScaleUnit extends StatelessWidget {
-  const _EventsScaleUnit({Key? key}) : super(key: key);
+class _ScaleBuilder {
+  ScaleFactory scale;
+  TimelineEventsEditInfo editInfo;
+  _ScaleBuilder(this.scale, this.editInfo);
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      child: null,
+  MultiHeaderListViewTrack builder() {
+    return MultiHeaderListViewTrack(
+      Axis.horizontal,
+      () => scale.length,
+      (context, index) {
+        TimelineEventsEditor.of(context, editInfo);
+        return scale.asUnitAtIndex(index);
+      },
     );
   }
 }
 
-enum TimelineEventsEditType {
-  fromTrack,
-  fromElement,
-  fromTopLeftHeader,
-  fromTrackHeader,
-  fromScaleHeader,
+enum TimelineEventsUpdateWith {
+  trackHeaderWidth,
+  scaleHedaerHeight,
+  unitWidth,
+  trackHeight,
+  trackEnd,
+  trackCount,
+  elementSelection,
+  editedTrack,
+  editedElement,
+}
+
+class _TimelineEventsUpdateData {
+  final double _trackHeaderWidth;
+  final double _scaleHedaerHeight;
+  final double _unitWidth;
+  final double _trackHeight;
+  final TimelinePosition _trackEnd;
+  final int _trackCount;
+  final Map<String, Map<TimelineElementData, bool>> _elementSelections;
+  final Set<String> _editedTracks = {};
+  final Set<TimelineElementData> _editedElements = {};
+
+  factory _TimelineEventsUpdateData(_TimelineEventsState state) {
+    final Map<String, Map<TimelineElementData, bool>> elementSelections = {};
+    int count = 0;
+    for (var item in state.selectedElements.entries) {
+      count += item.value.length;
+      elementSelections[item.key] = Map.fromIterable(
+        item.value,
+        value: (i) => true,
+      );
+    }
+    for (var item in state.notSelectedElements.entries) {
+      elementSelections[item.key]!.addAll(
+        Map.fromIterable(
+          item.value,
+          value: (i) => false,
+        ),
+      );
+    }
+
+    return _TimelineEventsUpdateData._init(
+        state.trackHeaderWidth,
+        state.scaleHeaderHeight,
+        state._unitWidth,
+        state.trackHeight,
+        state.trackEnd,
+        state.notSelectedElements.length,
+        elementSelections);
+  }
+
+  _TimelineEventsUpdateData._init(
+    this._trackHeaderWidth,
+    this._scaleHedaerHeight,
+    this._unitWidth,
+    this._trackHeight,
+    this._trackEnd,
+    this._trackCount,
+    this._elementSelections,
+  );
+
+  bool hasChange(_TimelineEventsUpdateData other) {
+    return (this._trackHeaderWidth != other._trackHeaderWidth) ||
+        (this._scaleHedaerHeight != other._scaleHedaerHeight) ||
+        (this._unitWidth != other._unitWidth) ||
+        (this._trackHeight != other._trackHeight) ||
+        (this._trackEnd != other._trackEnd) ||
+        (this._trackCount != other._trackCount) ||
+        _elementSelectionsEquals(other) ||
+        _editedTracks.isNotEmpty ||
+        _editedElements.isNotEmpty;
+  }
+
+  bool operator ==(dynamic other) {
+    if ((other is! _TimelineEventsUpdateData) ||
+        (this._trackHeaderWidth != other._trackHeaderWidth) ||
+        (this._scaleHedaerHeight != other._scaleHedaerHeight) ||
+        (this._unitWidth != other._unitWidth) ||
+        (this._trackHeight != other._trackHeight) ||
+        (this._trackEnd != other._trackEnd) ||
+        (this._trackCount != other._trackCount)) {
+      return false;
+    }
+
+    return _elementSelectionsEquals(other);
+  }
+
+  bool updateShouldNotifyDependent(
+      TimelineEventsEditor old, Set<TimelineEventsEditInfo> dependencies) {
+    for (var depend in dependencies) {
+      for (var updateWith in depend.updateWith) {
+        switch (updateWith) {
+          case TimelineEventsUpdateWith.trackHeaderWidth:
+            if (this._trackHeaderWidth != old._update._trackHeaderWidth) {
+              return true;
+            }
+            break;
+          case TimelineEventsUpdateWith.scaleHedaerHeight:
+            if (this._scaleHedaerHeight != old._update._scaleHedaerHeight) {
+              return true;
+            }
+            break;
+          case TimelineEventsUpdateWith.unitWidth:
+            if (this._unitWidth != old._update._unitWidth) {
+              return true;
+            }
+            break;
+          case TimelineEventsUpdateWith.trackHeight:
+            if (this._trackHeight != old._update._trackHeight) {
+              return true;
+            }
+            break;
+          case TimelineEventsUpdateWith.trackEnd:
+            if (this._trackEnd != old._update._trackEnd) {
+              return true;
+            }
+            break;
+          case TimelineEventsUpdateWith.trackCount:
+            if (this._trackEnd != old._update._trackEnd) {
+              return true;
+            }
+            break;
+          case TimelineEventsUpdateWith.elementSelection:
+            if (this._elementSelectionsEquals(
+              old._update,
+              trackName: depend.trackName,
+              element: depend.elementData,
+            )) {
+              return true;
+            }
+            break;
+          case TimelineEventsUpdateWith.editedTrack:
+            if (this._editedTracks.contains(depend.trackName)) {
+              return true;
+            }
+            break;
+          case TimelineEventsUpdateWith.editedElement:
+            if (this._editedElements.contains(depend.elementData)) {
+              return true;
+            }
+            break;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  bool _elementSelectionsEquals(_TimelineEventsUpdateData other,
+      {String? trackName, TimelineElementData? element}) {
+    var thisSels = this._elementSelections;
+    var otherSels = other._elementSelections;
+
+    if (trackName != null) {
+      var thisT = thisSels[trackName];
+      var otherT = otherSels[trackName];
+
+      if (element != null) {
+        var thisE = thisT?[element];
+        var otherE = otherT?[element];
+        return thisE == otherE;
+      }
+
+      return mapEquals(
+        thisT,
+        otherT,
+      );
+    }
+
+    return thisSels.entries.every((item) {
+      return mapEquals(
+        item.value,
+        otherSels[item.key],
+      );
+    });
+  }
+
+  @override
+  int get hashCode => hashValues(
+        this._trackHeaderWidth,
+        this._scaleHedaerHeight,
+        this._unitWidth,
+        this._trackHeight,
+        this._trackEnd,
+        this._trackCount,
+      );
 }
 
 class TimelineEventsEditInfo {
-  final TimelineEventsEditType type;
+  final Set<TimelineEventsUpdateWith> updateWith;
   final String? trackName;
   final TimelineElementData? elementData;
 
   const TimelineEventsEditInfo(
-      {required this.type, this.trackName, this.elementData});
+      {required this.updateWith, this.trackName, this.elementData});
 
   bool operator ==(dynamic other) {
     return (other is TimelineEventsEditInfo) &&
-        (this.type == other.type) &&
+        setEquals(this.updateWith, other.updateWith) &&
         (this.trackName == other.trackName) &&
         (this.elementData == other.elementData);
   }
 
   @override
-  int get hashCode => type.hashCode ^ trackName.hashCode ^ elementData.hashCode;
+  int get hashCode => hashValues(hashList(updateWith), trackName, elementData);
 }
 
 typedef TimelineElementAction = void Function(
@@ -298,9 +499,11 @@ typedef TimelineElementAction = void Function(
 
 class TimelineEventsEditor extends InheritedModel<TimelineEventsEditInfo> {
   final _TimelineEventsState _state;
+  final _TimelineEventsUpdateData _update;
 
   TimelineEventsEditor._create(
     this._state,
+    this._update,
     Widget child,
     Key? key,
   ) : super(child: child, key: key);
@@ -312,6 +515,7 @@ class TimelineEventsEditor extends InheritedModel<TimelineEventsEditInfo> {
   }) {
     return TimelineEventsEditor._create(
       state,
+      _TimelineEventsUpdateData(state),
       child,
       key,
     );
@@ -323,7 +527,7 @@ class TimelineEventsEditor extends InheritedModel<TimelineEventsEditInfo> {
       _state.selectedElements;
   Map<String, Set<TimelineElementData>> get _notSelectedElements =>
       _state.notSelectedElements;
-  double get viewWidth => unitWidth * trackEnd.position;
+  double get trackWidth => unitWidth * trackEnd.position;
   double get wiewHeight => trackHeight * _selectedElements.length;
 
   double get unitWidth => _state.unitWidth;
@@ -344,16 +548,24 @@ class TimelineEventsEditor extends InheritedModel<TimelineEventsEditInfo> {
     _selectedElements.addAll(tracks.map((key, value) => MapEntry(key, {})));
   }
 
-  /// トラックの更新をEventsに伝える
-  void updateTrack(String trackName) => _state.updateTrack(trackName);
+  TimelineTrackState? getTrack(String trackName) => _state._tracks[trackName];
 
-  /// エレメントの更新をEventsに伝える
-  void updateElement(TimelineElementData elementData) =>
-      _state.updateElement(elementData);
+  void registerTrack(TimelineTrackState trackState) {
+    _state._tracks[trackState.trackName] = trackState;
+  }
+
+  void edited({String? trackName, TimelineElementData? elementData}) {
+    if (trackName != null) {
+      _update._editedTracks.add(trackName);
+    }
+    if (elementData != null) {
+      _update._editedElements.add(elementData);
+    }
+  }
 
   /// エレメントの選択状態を変更する
   bool setSelectedOfElement(
-      TimelineElementData elementData, String trackName, bool isSelected) {
+      String trackName, TimelineElementData elementData, bool isSelected) {
     var trackS = _selectedElements[trackName];
     var trackNS = _notSelectedElements[trackName];
 
@@ -372,8 +584,6 @@ class TimelineEventsEditor extends InheritedModel<TimelineEventsEditInfo> {
       }
       trackNS.add(elementData);
     }
-
-    updateElement(elementData);
     return true;
   }
 
@@ -406,7 +616,6 @@ class TimelineEventsEditor extends InheritedModel<TimelineEventsEditInfo> {
 
       _selectedElements[element.key]?.removeWhere((e) {
         if (element.value.remove(e)) {
-          updateElement(e);
           sel.add(e);
           return true;
         }
@@ -415,7 +624,6 @@ class TimelineEventsEditor extends InheritedModel<TimelineEventsEditInfo> {
 
       _notSelectedElements[element.key]?.removeWhere((e) {
         if (element.value.remove(e)) {
-          updateElement(e);
           notSel.add(e);
           return true;
         }
@@ -494,26 +702,13 @@ class TimelineEventsEditor extends InheritedModel<TimelineEventsEditInfo> {
 
   @override
   bool updateShouldNotify(covariant TimelineEventsEditor old) {
-    return true;
+    var ret = _update != old._update;
+    return ret;
   }
 
   @override
   bool updateShouldNotifyDependent(covariant TimelineEventsEditor old,
       Set<TimelineEventsEditInfo> dependencies) {
-    for (var depend in dependencies) {
-      switch (depend.type) {
-        case TimelineEventsEditType.fromTrack:
-          return true;
-        case TimelineEventsEditType.fromElement:
-          return true;
-        case TimelineEventsEditType.fromTopLeftHeader:
-          return true;
-        case TimelineEventsEditType.fromTrackHeader:
-          return true;
-        case TimelineEventsEditType.fromScaleHeader:
-          return true;
-      }
-    }
-    return false;
+    return _update.updateShouldNotifyDependent(old, dependencies);
   }
 }
