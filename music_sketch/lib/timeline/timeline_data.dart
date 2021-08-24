@@ -9,14 +9,4 @@ class TimelineElementData {
   dynamic info;
 
   TimelineElementData(this.positionRange, this.info);
-
-  bool operator ==(dynamic other) {
-    return (other is TimelineElementData) &&
-        (this.positionRange == other.positionRange) &&
-        (this.info == other.info);
-  }
-
-  @override
-  int get hashCode => positionRange.hashCode ^ info.hashCode;
-
 }
