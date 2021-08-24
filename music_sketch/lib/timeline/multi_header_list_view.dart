@@ -115,9 +115,7 @@ class _MultiHeaderListViewState extends State<MultiHeaderListView> {
         }
 
         var p = controller.position;
-        print("${p.maxScrollExtent} / $max");
         if (p.maxScrollExtent < max) {
-          print("extent");
           Future.microtask(() {
             //無限ループ回避の条件
             if (p.maxScrollExtent < max) {
@@ -132,7 +130,6 @@ class _MultiHeaderListViewState extends State<MultiHeaderListView> {
               p.applyContentDimensions(p.minScrollExtent, max);
               p.correctPixels(max);
               p.notifyListeners();
-              print("over max");
             }
           });
         }
